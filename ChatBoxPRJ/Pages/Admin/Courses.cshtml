@@ -1,0 +1,15 @@
+@page
+@model ChatBoxPRJ.Pages.Admin.CoursesModel
+@{ ViewData["Title"] = "Môn học"; }
+<div class="page-heading"><div><span class="eyebrow">ACADEMIC CATALOG</span><h1>Quản lý môn học</h1><p>Mọi sinh viên đều có thể khám phá các môn được tạo tại đây.</p></div></div>
+@if (Model.Flash is not null) { <div class="alert alert-info">@Model.Flash</div> }
+<div class="split-layout">
+<section class="panel"><h2>Tạo môn học</h2><form method="post" class="form-stack">
+    <label asp-for="Code">Mã môn</label><input asp-for="Code" class="form-control" placeholder="PRN222" />
+    <label asp-for="Name">Tên môn</label><input asp-for="Name" class="form-control" />
+    <label asp-for="Credits">Số tín chỉ</label><input asp-for="Credits" class="form-control" />
+    <label asp-for="Description">Mô tả</label><textarea asp-for="Description" class="form-control" rows="4"></textarea>
+    <button class="btn btn-primary">Tạo môn học</button></form></section>
+<section class="panel grow"><div class="panel-title"><h2>Danh mục hiện có</h2><span class="count-pill">@Model.Courses.Count môn</span></div>
+    <div class="course-list">@foreach (var c in Model.Courses) { <article><div class="course-code">@c.Code</div><div><h3>@c.Name</h3><p>@c.Description</p></div><span>@c.Credits tín chỉ</span></article> }</div>
+</section></div>

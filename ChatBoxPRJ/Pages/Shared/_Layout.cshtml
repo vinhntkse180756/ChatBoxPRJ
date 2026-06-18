@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · StudySpace</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+<header class="topbar"><a class="top-brand" asp-page="/Index"><span>S</span><b>StudySpace</b></a>
+    <nav>
+    @if (User.Identity?.IsAuthenticated == true) {
+        @if (User.IsInRole("Student")) { <a asp-page="/Student/Chat">Hỏi đáp</a> }
+        @if (User.IsInRole("Admin")) { <a asp-page="/Admin/Index">Quản trị</a><a asp-page="/Admin/Assignments">Phân quyền</a> }
+        @if (User.IsInRole("Admin") || User.IsInRole("Lecturer")) { <a asp-page="/Lecturer/Documents">Tài liệu</a> }
+        <span class="user-chip"><i>@User.Identity.Name?.FirstOrDefault()</i>@User.Identity.Name</span>
+        <form method="post" asp-page="/Account/Logout"><button class="link-button">Đăng xuất</button></form>
+    } else { <a asp-page="/Account/Login">Đăng nhập</a><a class="nav-cta" asp-page="/Account/Register">Đăng ký</a> }
+    </nav>
+</header>
+<main class="@(ViewData["FullWidth"] is true ? "full-main" : "site-main")">@RenderBody()</main>
+@if (ViewData["FullWidth"] is not true) { <footer class="site-footer"><span>StudySpace · Student Knowledge Chatbot</span><span>Razor Pages · SignalR · SQL Server · RAG</span></footer> }
+<script src="~/lib/jquery/dist/jquery.min.js"></script><script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script><script src="~/js/site.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body></html>

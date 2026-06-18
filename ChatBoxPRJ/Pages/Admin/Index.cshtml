@@ -1,0 +1,9 @@
+@page
+@{ ViewData["Title"] = "Quản trị"; }
+<div class="page-heading"><div><span class="eyebrow">CONTROL CENTER</span><h1>Quản trị hệ thống</h1><p>Thiết lập tài khoản, môn học và ma trận sở hữu nội dung.</p></div></div>
+<div class="dashboard-grid">
+    <a class="feature-card" asp-page="/Admin/Lecturers"><span class="feature-icon">👩‍🏫</span><h2>Tài khoản giảng viên</h2><p>Cấp phát tài khoản đúng vai trò, không cho người dùng tự nâng quyền.</p><b>Mở quản lý →</b></a>
+    <a class="feature-card" asp-page="/Admin/Courses"><span class="feature-icon">📚</span><h2>Môn học</h2><p>Tạo không gian tri thức mở theo mã môn và số tín chỉ.</p><b>Mở quản lý →</b></a>
+    <a class="feature-card" asp-page="/Admin/Assignments"><span class="feature-icon">🔗</span><h2>Phân quyền</h2><p>Gán nhiều giảng viên cho nhiều môn học bằng transaction.</p><b>Mở ma trận →</b></a>
+    <a class="feature-card" asp-page="/Lecturer/Documents"><span class="feature-icon">🧠</span><h2>Kho tri thức</h2><p>Theo dõi tài liệu, trạng thái index và xử lý triệt để.</p><b>Mở tài liệu →</b></a>
+</div>

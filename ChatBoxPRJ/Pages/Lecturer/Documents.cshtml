@@ -1,0 +1,19 @@
+@page
+@using ChatBoxPRJ.Business.Domain
+@model ChatBoxPRJ.Pages.Lecturer.DocumentsModel
+@{ ViewData["Title"] = "Kho tài liệu"; }
+<div class="page-heading"><div><span class="eyebrow">KNOWLEDGE PIPELINE</span><h1>Quản lý tài liệu</h1><p>Upload, trích xuất, chunk và lập chỉ mục tri thức theo đúng phạm vi môn học.</p></div><span class="live-pill"><i></i> Theo dõi trực tiếp</span></div>
+@if (Model.Flash is not null) { <div class="alert alert-info">@Model.Flash</div> }
+<div class="document-layout"><aside class="panel upload-panel"><h2>Bắt đầu xử lý</h2>
+<form method="post" enctype="multipart/form-data" asp-page-handler="Upload" class="form-stack">
+    <label asp-for="CourseId">Môn học được cấp quyền</label><select asp-for="CourseId" class="form-select" required><option value="">— Chọn môn —</option>@foreach (var c in Model.Courses) { <option value="@c.Id">@c.Code · @c.Name</option> }</select>
+    <label class="drop-zone"><span class="drop-icon">⇧</span><b>Chọn PDF, DOCX hoặc TXT</b><small>Tối đa 25 MB · PDF scan ảnh sẽ bị từ chối</small><input asp-for="UploadFile" accept=".pdf,.docx,.txt" required /></label>
+    <label class="switch-row"><input asp-for="Overwrite" /><span>Ghi đè nếu trùng tên nhưng khác nội dung</span></label>
+    <button class="btn btn-primary btn-lg">Bắt đầu xử lý</button>
+</form><div class="pipeline-note"><b>Pipeline</b><span>SHA-256 → Extract → Chunk → Embed → Index</span></div></aside>
+<section class="panel grow"><div class="panel-title"><div><h2>Tài liệu đã upload</h2><p>Chỉ file “Hoàn thành” mới xuất hiện với sinh viên.</p></div><form method="get"><select asp-for="CourseId" class="form-select" onchange="this.form.submit()"><option value="">Tất cả môn</option>@foreach (var c in Model.Courses) { <option value="@c.Id">@c.Code</option> }</select></form></div>
+<div class="table-wrap"><table class="data-table"><thead><tr><th>Tài liệu</th><th>Môn</th><th>Ngày tải</th><th>Trạng thái</th><th></th></tr></thead><tbody>
+@foreach (var d in Model.Documents) { var cls = d.Status.ToString().ToLowerInvariant(); <tr><td><div class="file-cell"><span>📄</span><div><b>@d.FileName</b>@if (d.FailureReason is not null) { <small title="@d.FailureReason">@d.FailureReason</small> }</div></div></td><td>@d.CourseName</td><td>@d.UploadedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td><td><span class="status @cls">@d.Status</span></td><td><div class="row-actions">@if (d.Status == DocumentStatus.Completed) { <a class="icon-btn" asp-page="/Lecturer/Chunks" asp-route-documentId="@d.Id" title="Xem các đoạn chunk">✂️</a> }<form method="post" asp-page-handler="Delete" onsubmit="return confirm('Xóa hoàn toàn tài liệu và tri thức của file?')"><input type="hidden" name="documentId" value="@d.Id"/><input type="hidden" name="courseId" value="@Model.CourseId"/><button class="icon-btn" title="Xóa">🗑</button></form></div></td></tr> }
+@if (!Model.Documents.Any()) { <tr><td colspan="5"><div class="empty-state compact"><span>📭</span><h3>Chưa có tài liệu</h3><p>Upload tệp đầu tiên để khởi tạo kho tri thức.</p></div></td></tr> }
+</tbody></table></div></section></div>
+@section Scripts { <script>if(document.querySelector('.status.processing')) setTimeout(()=>location.reload(), 3500);</script> }

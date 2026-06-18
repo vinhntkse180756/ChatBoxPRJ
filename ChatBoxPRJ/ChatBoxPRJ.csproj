@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="ChatBoxPRJ.Business\**\*.cs" />
+    <Compile Remove="ChatBoxPRJ.DataAccess\**\*.cs" />
+    <Content Remove="ChatBoxPRJ.Business\**\*" />
+    <Content Remove="ChatBoxPRJ.DataAccess\**\*" />
+    <ProjectReference Include="ChatBoxPRJ.Business\ChatBoxPRJ.Business.csproj" />
+    <ProjectReference Include="ChatBoxPRJ.DataAccess\ChatBoxPRJ.DataAccess.csproj" />
+  </ItemGroup>
+
+</Project>

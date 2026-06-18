@@ -1,0 +1,13 @@
+@page
+@model ChatBoxPRJ.Pages.Admin.AssignmentsModel
+@{ ViewData["Title"] = "Phân quyền"; }
+<div class="page-heading"><div><span class="eyebrow">OWNERSHIP MATRIX</span><h1>Gán giảng viên – môn học</h1><p>Lưu cấu hình bằng phép diff trong một transaction nguyên tử.</p></div></div>
+@if (Model.Flash is not null) { <div class="alert alert-info">@Model.Flash</div> }
+<section class="panel assignment-panel">
+    <form method="get" class="inline-form"><div><label>Chọn giảng viên</label><select asp-for="LecturerId" class="form-select" onchange="this.form.submit()"><option value="">— Chọn người phụ trách —</option>@foreach (var u in Model.Lecturers) { <option value="@u.Id">@u.Code · @u.FullName</option> }</select></div></form>
+    @if (Model.LecturerId.HasValue) {
+    <form method="post"><input type="hidden" asp-for="LecturerId" /><div class="check-grid">
+        @foreach (var c in Model.Courses) { <label class="course-check"><input type="checkbox" name="SelectedCourseIds" value="@c.Id" checked="@Model.Current.Contains(c.Id)" /><span><b>@c.Code</b><strong>@c.Name</strong><small>@c.Credits tín chỉ</small></span></label> }
+    </div><div class="action-bar"><span>@Model.Current.Count môn đang được gán</span><button class="btn btn-primary">Lưu cấu hình</button></div></form>
+    } else { <div class="empty-state compact"><span>↖</span><h2>Chọn giảng viên để bắt đầu</h2><p>Danh sách môn sẽ xuất hiện tại đây.</p></div> }
+</section>

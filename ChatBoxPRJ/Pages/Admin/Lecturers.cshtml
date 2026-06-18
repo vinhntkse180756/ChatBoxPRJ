@@ -1,0 +1,13 @@
+@page
+@model ChatBoxPRJ.Pages.Admin.LecturersModel
+@{ ViewData["Title"] = "Giảng viên"; }
+<div class="page-heading"><div><span class="eyebrow">IDENTITY & ACCESS</span><h1>Tài khoản giảng viên</h1><p>Role Lecturer được gán cứng tại tầng nghiệp vụ.</p></div></div>
+@if (Model.Flash is not null) { <div class="alert alert-info">@Model.Flash</div> }
+<div class="split-layout"><section class="panel"><h2>Cấp tài khoản mới</h2><form method="post" class="form-stack">
+    <label asp-for="Code">Mã giảng viên</label><input asp-for="Code" class="form-control" />
+    <label asp-for="FullName">Họ và tên</label><input asp-for="FullName" class="form-control" />
+    <label asp-for="Email">Email bộ môn</label><input asp-for="Email" class="form-control" />
+    <label asp-for="Password">Mật khẩu khởi tạo</label><input asp-for="Password" class="form-control" type="password" />
+    <button class="btn btn-primary">Cấp tài khoản Lecturer</button></form></section>
+<section class="panel grow"><div class="panel-title"><h2>Danh sách giảng viên</h2><span class="count-pill">@Model.Lecturers.Count</span></div>
+<div class="people-list">@foreach (var u in Model.Lecturers) { <article><div class="avatar">@u.FullName.FirstOrDefault()</div><div><b>@u.FullName</b><small>@u.Code · @u.Email</small></div><span class="status completed">Lecturer</span></article> }</div></section></div>
