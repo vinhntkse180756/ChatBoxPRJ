@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace ChatBoxPRJ.Pages.Student;
-public sealed class ChatModel(ICourseService courses, IChatService chat) : PageModel
+public sealed class ChatModel(ICourseService courses, IChatService chat, IDocumentService documents) : PageModel
 {
     [BindProperty(SupportsGet = true)] public Guid? CourseId { get; set; }
     [BindProperty(SupportsGet = true)] public Guid? DocumentId { get; set; }
@@ -19,6 +19,15 @@ public sealed class ChatModel(ICourseService courses, IChatService chat) : PageM
         await chat.AskAsync(User.UserId(), CourseId.Value, DocumentId.Value, Question, HttpContext.RequestAborted);
         return RedirectToPage(new { courseId = CourseId, documentId = DocumentId });
     }
+    public async Task<IActionResult> OnGetFileAsync(Guid documentId, Guid courseId, bool download = false)
+    {
+        var file = await documents.GetStudentFileAsync(documentId, courseId, HttpContext.RequestAborted);
+        if (file is null) return NotFound();
+        var stream = new FileStream(file.Value.Path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        if (download) return File(stream, file.Value.ContentType, file.Value.FileName);
+        return new FileStreamResult(stream, file.Value.ContentType) { EnableRangeProcessing = true };
+    }
+
     private async Task LoadAsync()
     {
         Courses = await courses.ListAsync(HttpContext.RequestAborted);

@@ -18,6 +18,15 @@ public sealed class UserRepository(ChatBoxDbContext db) : IUserRepository
     public Task<bool> CodeOrEmailExistsAsync(string code, string email, CancellationToken ct = default) => db.Users.AnyAsync(x => x.Code == code || x.Email == email, ct);
     public async Task AddAsync(AppUser user, CancellationToken ct = default) { db.Users.Add(user); await db.SaveChangesAsync(ct); }
     public async Task<IReadOnlyList<AppUser>> ListLecturersAsync(CancellationToken ct = default) => await db.Users.AsNoTracking().Where(x => x.Role == UserRole.Lecturer).OrderBy(x => x.FullName).ToListAsync(ct);
+    public async Task UpdateAsync(AppUser user, CancellationToken ct = default) { db.Users.Update(user); await db.SaveChangesAsync(ct); }
+    public async Task<IReadOnlyList<string>> DeleteLecturerAsync(Guid id, CancellationToken ct = default)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(x => x.Id == id && x.Role == UserRole.Lecturer, ct);
+        if (user is null) return [];
+        var docs = await db.Documents.Where(x => x.UploadedById == id).ToListAsync(ct);
+        var paths = docs.Select(x => x.StoragePath).ToList();
+        db.Documents.RemoveRange(docs); db.Users.Remove(user); await db.SaveChangesAsync(ct); return paths;
+    }
 }
 
 public sealed class CourseRepository(ChatBoxDbContext db) : ICourseRepository
@@ -26,9 +35,18 @@ public sealed class CourseRepository(ChatBoxDbContext db) : ICourseRepository
     public async Task<IReadOnlyList<Course>> ListForLecturerAsync(Guid lecturerId, CancellationToken ct = default) => await db.LecturerCourses.AsNoTracking().Where(x => x.LecturerId == lecturerId).Select(x => x.Course).OrderBy(x => x.Name).ToListAsync(ct);
     public Task<Course?> FindAsync(Guid id, CancellationToken ct = default) => db.Courses.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
     public async Task AddAsync(Course course, CancellationToken ct = default) { db.Courses.Add(course); await db.SaveChangesAsync(ct); }
+    public async Task UpdateAsync(Course course, CancellationToken ct = default) { db.Courses.Update(course); await db.SaveChangesAsync(ct); }
+    public async Task<IReadOnlyList<string>> DeleteAsync(Guid id, CancellationToken ct = default)
+    {
+        var course = await db.Courses.Include(x => x.Documents).FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (course is null) return [];
+        var paths = course.Documents.Select(x => x.StoragePath).ToList(); db.Courses.Remove(course); await db.SaveChangesAsync(ct); return paths;
+    }
     public Task<bool> CodeExistsAsync(string code, CancellationToken ct = default) => db.Courses.AnyAsync(x => x.Code == code, ct);
     public async Task<IReadOnlySet<Guid>> GetLecturerCourseIdsAsync(Guid lecturerId, CancellationToken ct = default)
         => (await db.LecturerCourses.AsNoTracking().Where(x => x.LecturerId == lecturerId).Select(x => x.CourseId).ToListAsync(ct)).ToHashSet();
+    public Task<Guid?> GetCourseHeadAsync(Guid courseId, CancellationToken ct = default)
+        => db.LecturerCourses.Where(x => x.CourseId == courseId).Select(x => (Guid?)x.LecturerId).FirstOrDefaultAsync(ct);
 
     public async Task ReplaceLecturerCoursesAsync(Guid lecturerId, IReadOnlySet<Guid> courseIds, CancellationToken ct = default)
     {
@@ -40,6 +58,11 @@ public sealed class CourseRepository(ChatBoxDbContext db) : ICourseRepository
                 .Where(x => x.LecturerId == lecturerId)
                 .ToListAsync(ct);
             var oldIds = old.Select(x => x.CourseId).ToHashSet();
+
+            var occupied = await db.LecturerCourses.AsNoTracking()
+                .Where(x => courseIds.Contains(x.CourseId) && x.LecturerId != lecturerId)
+                .Select(x => x.CourseId).ToListAsync(ct);
+            if (occupied.Count > 0) throw new InvalidOperationException("Một hoặc nhiều môn đã có trưởng bộ môn.");
 
             db.LecturerCourses.RemoveRange(old.Where(x => !courseIds.Contains(x.CourseId)));
             db.LecturerCourses.AddRange(courseIds

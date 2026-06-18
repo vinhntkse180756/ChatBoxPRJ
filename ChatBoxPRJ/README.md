@@ -60,14 +60,14 @@ $env:ConnectionStrings__ChatBoxDb="Server=.;Database=StudentChatBoxDb;Trusted_Co
 dotnet run
 ```
 
-### Tạo database bằng SQL Server Authentication
+### Tạo database bằng SQL Server LocalDB
 
-Mở [Database/01_Create_StudentChatBoxDb.sql](Database/01_Create_StudentChatBoxDb.sql) trong SSMS và Execute bằng tài khoản `sa`. Script tạo đầy đủ database, bảng, khóa ngoại và index. Sau đó chạy `Database/02_Verify_StudentChatBoxDb.sql` để kiểm tra đủ 7 bảng nghiệp vụ.
+Trong SSMS, kết nối `(localdb)\MSSQLLocalDB` bằng Windows Authentication. Mở [Database/01_Create_StudentChatBoxDb.sql](Database/01_Create_StudentChatBoxDb.sql) và Execute toàn bộ. Sau đó chạy `Database/02_Verify_StudentChatBoxDb.sql` để kiểm tra đủ 7 bảng nghiệp vụ.
 
-Sau đó chạy ứng dụng bằng SQL Authentication:
+Sau đó chạy ứng dụng bằng Windows Authentication:
 
 ```powershell
-$env:ConnectionStrings__ChatBoxDb="Server=.;Database=StudentChatBoxDb;User Id=chatbox_app;Password=MAT_KHAU_DA_DAT;Encrypt=False;TrustServerCertificate=True;MultipleActiveResultSets=True"
+$env:ConnectionStrings__ChatBoxDb="Server=(localdb)\MSSQLLocalDB;Database=StudentChatBoxDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
 dotnet run --project .\ChatBoxPRJ\ChatBoxPRJ.csproj
 ```
 

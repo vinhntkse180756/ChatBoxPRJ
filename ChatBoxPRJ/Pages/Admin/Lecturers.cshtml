@@ -1,13 +1,7 @@
 @page
 @model ChatBoxPRJ.Pages.Admin.LecturersModel
 @{ ViewData["Title"] = "Giảng viên"; }
-<div class="page-heading"><div><span class="eyebrow">IDENTITY & ACCESS</span><h1>Tài khoản giảng viên</h1><p>Role Lecturer được gán cứng tại tầng nghiệp vụ.</p></div></div>
-@if (Model.Flash is not null) { <div class="alert alert-info">@Model.Flash</div> }
-<div class="split-layout"><section class="panel"><h2>Cấp tài khoản mới</h2><form method="post" class="form-stack">
-    <label asp-for="Code">Mã giảng viên</label><input asp-for="Code" class="form-control" />
-    <label asp-for="FullName">Họ và tên</label><input asp-for="FullName" class="form-control" />
-    <label asp-for="Email">Email bộ môn</label><input asp-for="Email" class="form-control" />
-    <label asp-for="Password">Mật khẩu khởi tạo</label><input asp-for="Password" class="form-control" type="password" />
-    <button class="btn btn-primary">Cấp tài khoản Lecturer</button></form></section>
-<section class="panel grow"><div class="panel-title"><h2>Danh sách giảng viên</h2><span class="count-pill">@Model.Lecturers.Count</span></div>
-<div class="people-list">@foreach (var u in Model.Lecturers) { <article><div class="avatar">@u.FullName.FirstOrDefault()</div><div><b>@u.FullName</b><small>@u.Code · @u.Email</small></div><span class="status completed">Lecturer</span></article> }</div></section></div>
+<div class="page-heading"><div><span class="eyebrow">IDENTITY & ACCESS</span><h1>Quản lý giảng viên</h1><p>Quyền upload chỉ có sau khi được gán làm trưởng bộ môn.</p></div></div>
+@if(Model.Flash is not null){<div class="alert alert-info">@Model.Flash</div>}
+<div class="split-layout"><section class="panel"><h2>Cấp tài khoản mới</h2><form method="post" class="form-stack"><label>Mã giảng viên</label><input asp-for="Code" class="form-control"/><label>Họ tên</label><input asp-for="FullName" class="form-control"/><label>Email</label><input asp-for="Email" class="form-control"/><label>Mật khẩu</label><input asp-for="Password" type="password" class="form-control"/><button class="btn btn-primary">Tạo giảng viên</button></form></section>
+<section class="panel grow"><h2>Danh sách giảng viên</h2>@foreach(var u in Model.Lecturers){<form method="post" asp-page-handler="Update" class="form-stack border rounded p-3 mb-3"><input type="hidden" name="EditId" value="@u.Id"/><div class="row g-2"><div class="col-md-2"><input name="Code" value="@u.Code" class="form-control"/></div><div class="col-md-3"><input name="FullName" value="@u.FullName" class="form-control"/></div><div class="col-md-4"><input name="Email" value="@u.Email" class="form-control"/></div><div class="col-md-3"><input name="Password" type="password" placeholder="Mật khẩu mới (tùy chọn)" class="form-control"/></div></div><div class="d-flex gap-2"><button class="btn btn-outline-primary">Lưu sửa đổi</button><button class="btn btn-outline-danger" formaction="?handler=Delete&id=@u.Id" onclick="return confirm('Xóa giảng viên và các tài liệu do người này tải lên?')">Xóa</button></div></form>}</section></div>

@@ -11,6 +11,7 @@ public sealed class CoursesModel(ICourseService service) : PageModel
     [BindProperty, Required] public string Name { get; set; } = "";
     [BindProperty, Range(1, 20)] public int Credits { get; set; } = 3;
     [BindProperty] public string Description { get; set; } = "";
+    [BindProperty] public Guid EditId { get; set; }
     public IReadOnlyList<CourseDto> Courses { get; set; } = [];
     [TempData] public string? Flash { get; set; }
     public async Task OnGetAsync() => Courses = await service.ListAsync(HttpContext.RequestAborted);
@@ -22,4 +23,6 @@ public sealed class CoursesModel(ICourseService service) : PageModel
         if (!result.Success) { await OnGetAsync(); return Page(); }
         return RedirectToPage();
     }
+    public async Task<IActionResult> OnPostUpdateAsync() { var r = await service.UpdateAsync(EditId, Code, Name, Credits, Description, HttpContext.RequestAborted); Flash = r.Message; return RedirectToPage(); }
+    public async Task<IActionResult> OnPostDeleteAsync(Guid id) { var r = await service.DeleteAsync(id, HttpContext.RequestAborted); Flash = r.Message; return RedirectToPage(); }
 }

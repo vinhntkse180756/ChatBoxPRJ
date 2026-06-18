@@ -2,7 +2,7 @@
     StudySpace / StudentChatBoxDb
     Chạy file này bằng tài khoản có quyền sysadmin trong SQL Server Management Studio.
 
-    Đăng nhập SSMS bằng SQL Server Authentication (sa) rồi Execute toàn bộ file.
+    Kết nối (localdb)\MSSQLLocalDB bằng Windows Authentication rồi Execute toàn bộ file.
     Script có thể chạy lại nhiều lần mà không xóa dữ liệu hiện có.
 */
 

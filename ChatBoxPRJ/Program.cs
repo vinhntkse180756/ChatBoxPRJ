@@ -17,7 +17,7 @@ builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(P
 builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AuthorizeFolder("/Admin", "AdminOnly");
-    options.Conventions.AuthorizeFolder("/Lecturer", "ContentManagers");
+    options.Conventions.AuthorizeFolder("/Lecturer", "LecturersOnly");
     options.Conventions.AuthorizeFolder("/Student", "StudentsOnly");
 });
 builder.Services.AddSignalR();
@@ -30,7 +30,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
-    options.AddPolicy("ContentManagers", p => p.RequireRole("Admin", "Lecturer"));
+    options.AddPolicy("LecturersOnly", p => p.RequireRole("Lecturer"));
     options.AddPolicy("StudentsOnly", p => p.RequireRole("Student"));
 });
 builder.Services.AddDbContext<ChatBoxDbContext>(options =>
@@ -92,6 +92,13 @@ using (var scope = app.Services.CreateScope())
         IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ChatMessages_SessionId_DocumentId_CreatedAtUtc' AND object_id = OBJECT_ID('dbo.ChatMessages'))
             CREATE INDEX [IX_ChatMessages_SessionId_DocumentId_CreatedAtUtc]
             ON [dbo].[ChatMessages] ([SessionId], [DocumentId], [CreatedAtUtc]);
+        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_LecturerCourses_CourseId' AND object_id = OBJECT_ID('dbo.LecturerCourses'))
+        BEGIN
+            ;WITH duplicates AS
+            (SELECT LecturerId, CourseId, ROW_NUMBER() OVER(PARTITION BY CourseId ORDER BY LecturerId) AS rn FROM dbo.LecturerCourses)
+            DELETE FROM duplicates WHERE rn > 1;
+            CREATE UNIQUE INDEX [UX_LecturerCourses_CourseId] ON [dbo].[LecturerCourses] ([CourseId]);
+        END
         """);
     await scope.ServiceProvider.GetRequiredService<DatabaseSeeder>().SeedAsync();
 }

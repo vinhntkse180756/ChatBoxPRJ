@@ -10,6 +10,8 @@ public interface IUserRepository
     Task<bool> CodeOrEmailExistsAsync(string code, string email, CancellationToken ct = default);
     Task AddAsync(AppUser user, CancellationToken ct = default);
     Task<IReadOnlyList<AppUser>> ListLecturersAsync(CancellationToken ct = default);
+    Task UpdateAsync(AppUser user, CancellationToken ct = default);
+    Task<IReadOnlyList<string>> DeleteLecturerAsync(Guid id, CancellationToken ct = default);
 }
 
 public interface ICourseRepository
@@ -18,9 +20,12 @@ public interface ICourseRepository
     Task<IReadOnlyList<Course>> ListForLecturerAsync(Guid lecturerId, CancellationToken ct = default);
     Task<Course?> FindAsync(Guid id, CancellationToken ct = default);
     Task AddAsync(Course course, CancellationToken ct = default);
+    Task UpdateAsync(Course course, CancellationToken ct = default);
+    Task<IReadOnlyList<string>> DeleteAsync(Guid id, CancellationToken ct = default);
     Task<bool> CodeExistsAsync(string code, CancellationToken ct = default);
     Task<IReadOnlySet<Guid>> GetLecturerCourseIdsAsync(Guid lecturerId, CancellationToken ct = default);
     Task ReplaceLecturerCoursesAsync(Guid lecturerId, IReadOnlySet<Guid> courseIds, CancellationToken ct = default);
+    Task<Guid?> GetCourseHeadAsync(Guid courseId, CancellationToken ct = default);
 }
 
 public interface IDocumentRepository
@@ -70,11 +75,15 @@ public interface IAccountService
     Task<(bool Success, string Message)> CreateLecturerAsync(string code, string fullName, string email, string password, CancellationToken ct = default);
     Task<UserDto?> AuthenticateAsync(string login, string password, CancellationToken ct = default);
     Task<IReadOnlyList<UserDto>> ListLecturersAsync(CancellationToken ct = default);
+    Task<(bool Success, string Message)> UpdateLecturerAsync(Guid id, string code, string fullName, string email, string? password, CancellationToken ct = default);
+    Task<(bool Success, string Message)> DeleteLecturerAsync(Guid id, CancellationToken ct = default);
 }
 
 public interface ICourseService
 {
     Task<(bool Success, string Message)> CreateAsync(string code, string name, int credits, string description, CancellationToken ct = default);
+    Task<(bool Success, string Message)> UpdateAsync(Guid id, string code, string name, int credits, string description, CancellationToken ct = default);
+    Task<(bool Success, string Message)> DeleteAsync(Guid id, CancellationToken ct = default);
     Task<IReadOnlyList<CourseDto>> ListAsync(CancellationToken ct = default);
     Task<IReadOnlyList<CourseDto>> ListForLecturerAsync(Guid lecturerId, CancellationToken ct = default);
     Task<IReadOnlySet<Guid>> GetAssignmentsAsync(Guid lecturerId, CancellationToken ct = default);
@@ -89,6 +98,7 @@ public interface IDocumentService
     Task<IReadOnlyList<DocumentDto>> ListAsync(Guid? courseId, bool completedOnly, CancellationToken ct = default);
     Task<DocumentChunksDto?> GetChunksAsync(Guid documentId, Guid actorId, UserRole role, CancellationToken ct = default);
     Task<(bool Success, string Message)> DeleteAsync(Guid documentId, Guid actorId, UserRole role, CancellationToken ct = default);
+    Task<(string Path, string FileName, string ContentType)?> GetStudentFileAsync(Guid documentId, Guid courseId, CancellationToken ct = default);
 }
 
 public interface IChatService
