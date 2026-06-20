@@ -19,13 +19,12 @@ public sealed class ChatModel(ICourseService courses, IChatService chat, IDocume
         await chat.AskAsync(User.UserId(), CourseId.Value, DocumentId.Value, Question, HttpContext.RequestAborted);
         return RedirectToPage(new { courseId = CourseId, documentId = DocumentId });
     }
-    public async Task<IActionResult> OnGetFileAsync(Guid documentId, Guid courseId, bool download = false)
+    public async Task<IActionResult> OnGetFileAsync(Guid documentId, Guid courseId)
     {
         var file = await documents.GetStudentFileAsync(documentId, courseId, HttpContext.RequestAborted);
         if (file is null) return NotFound();
         var stream = new FileStream(file.Value.Path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        if (download) return File(stream, file.Value.ContentType, file.Value.FileName);
-        return new FileStreamResult(stream, file.Value.ContentType) { EnableRangeProcessing = true };
+        return File(stream, file.Value.ContentType, file.Value.FileName);
     }
 
     private async Task LoadAsync()

@@ -57,7 +57,7 @@ public interface IVectorStore
 public enum EmbeddingTask { Document, Query }
 public interface IEmbeddingService { Task<float[]> EmbedAsync(string text, EmbeddingTask task = EmbeddingTask.Document, CancellationToken ct = default); }
 public interface IDocumentWorkQueue { ValueTask EnqueueAsync(Guid documentId, CancellationToken ct = default); }
-public interface IDocumentStatusNotifier { Task NotifyAsync(Guid documentId, DocumentStatus status, string? message, CancellationToken ct = default); }
+public interface IDocumentStatusNotifier { Task NotifyAsync(Guid documentId, DocumentStatus status, int progress, string? message, CancellationToken ct = default); }
 public interface IAnswerGenerator
 {
     Task<string> GenerateAsync(string question, IReadOnlyList<RetrievedChunk> context, IReadOnlyList<ChatMessage> history, CancellationToken ct = default);

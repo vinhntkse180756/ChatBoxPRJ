@@ -32,6 +32,12 @@ public sealed class DocumentWorker(DocumentWorkQueue queue, IServiceScopeFactory
 
 public sealed class SignalRDocumentStatusNotifier(IHubContext<DocumentHub> hub) : IDocumentStatusNotifier
 {
-    public Task NotifyAsync(Guid documentId, DocumentStatus status, string? message, CancellationToken ct = default)
-        => hub.Clients.All.SendAsync("documentStatusChanged", new { documentId, status = status.ToString(), message }, ct);
+    public Task NotifyAsync(Guid documentId, DocumentStatus status, int progress, string? message, CancellationToken ct = default)
+        => hub.Clients.All.SendAsync("documentStatusChanged", new
+        {
+            documentId,
+            status = status.ToString(),
+            progress = Math.Clamp(progress, 0, 100),
+            message
+        }, ct);
 }

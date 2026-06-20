@@ -21,12 +21,13 @@ public sealed class DocumentService(
     StorageOptions storage,
     RagOptions rag) : IDocumentService
 {
+    private const long MaxFileSize = 100L * 1024 * 1024;
     private static readonly HashSet<string> Allowed = new(StringComparer.OrdinalIgnoreCase) { ".pdf", ".docx", ".txt" };
 
     public async Task<UploadResult> UploadAsync(UploadRequest request, CancellationToken ct = default)
     {
         if (!Allowed.Contains(Path.GetExtension(request.FileName))) return new(false, "Chỉ hỗ trợ PDF, DOCX hoặc TXT.");
-        if (request.Content.CanSeek && request.Content.Length > 25 * 1024 * 1024) return new(false, "Tệp vượt quá giới hạn 25 MB.");
+        if (request.Content.CanSeek && request.Content.Length > MaxFileSize) return new(false, "Tệp vượt quá giới hạn 100 MB.");
 
         await using var memory = new MemoryStream();
         await request.Content.CopyToAsync(memory, ct);
@@ -57,7 +58,7 @@ public sealed class DocumentService(
         await using (var target = File.Create(document.StoragePath)) await memory.CopyToAsync(target, ct);
         await documents.AddAsync(document, ct);
         await queue.EnqueueAsync(document.Id, ct);
-        await notifier.NotifyAsync(document.Id, DocumentStatus.Processing, "Đang trích xuất và lập chỉ mục…", ct);
+        await notifier.NotifyAsync(document.Id, DocumentStatus.Processing, 5, "Đã upload, đang chờ xử lý…", ct);
         return new(true, "Tệp đã vào hàng đợi xử lý.", document.Id);
     }
 
@@ -67,37 +68,46 @@ public sealed class DocumentService(
         if (document is null) return;
         try
         {
+            await notifier.NotifyAsync(document.Id, DocumentStatus.Processing, 10, "Đang trích xuất nội dung…", ct);
             var pages = await ExtractPagesAsync(document.StoragePath, ct);
             if (pages.Sum(x => x.Text.Length) < 20) throw new InvalidOperationException("Không trích xuất được chữ. PDF có thể là bản scan ảnh.");
+            await notifier.NotifyAsync(document.Id, DocumentStatus.Processing, 25, "Đã trích xuất, đang chia đoạn…", ct);
             var chunks = new List<DocumentChunk>();
             var chunkNo = 1;
-            foreach (var page in pages)
+            var pendingChunks = pages
+                .SelectMany(page => Chunk(page.Text, rag.ChunkWords, rag.OverlapWords)
+                    .Select(text => (page.Page, Text: text)))
+                .ToList();
+            for (var index = 0; index < pendingChunks.Count; index++)
             {
-                foreach (var text in Chunk(page.Text, rag.ChunkWords, rag.OverlapWords))
+                var pending = pendingChunks[index];
+                var vector = await embeddings.EmbedAsync(pending.Text, EmbeddingTask.Document, ct);
+                chunks.Add(new DocumentChunk
                 {
-                    var vector = await embeddings.EmbedAsync(text, EmbeddingTask.Document, ct);
-                    chunks.Add(new DocumentChunk
-                    {
-                        DocumentId = document.Id, CourseId = document.CourseId, PageNumber = page.Page,
-                        ChunkNumber = chunkNo++, Content = text, VectorJson = System.Text.Json.JsonSerializer.Serialize(vector)
-                    });
+                    DocumentId = document.Id, CourseId = document.CourseId, PageNumber = pending.Page,
+                    ChunkNumber = chunkNo++, Content = pending.Text, VectorJson = System.Text.Json.JsonSerializer.Serialize(vector)
+                });
+                var progress = 30 + (int)Math.Round((index + 1d) / Math.Max(1, pendingChunks.Count) * 50d);
+                await notifier.NotifyAsync(document.Id, DocumentStatus.Processing, progress,
+                    $"Đang tạo vector {index + 1}/{pendingChunks.Count} đoạn…", ct);
                 }
-            }
             // Luôn giữ một bản chunk trong SQL để giảng viên có thể kiểm tra nội dung,
             // kể cả khi vector chính được lưu ở Qdrant.
+            await notifier.NotifyAsync(document.Id, DocumentStatus.Processing, 85, "Đang lưu các đoạn tài liệu…", ct);
             await documents.ReplaceChunksAsync(document.Id, chunks, ct);
+            await notifier.NotifyAsync(document.Id, DocumentStatus.Processing, 92, "Đang lập chỉ mục tìm kiếm…", ct);
             await vectorStore.UpsertAsync(document, chunks, ct);
             document.Status = DocumentStatus.Completed;
             document.FailureReason = null;
             await documents.UpdateAsync(document, ct);
-            await notifier.NotifyAsync(document.Id, document.Status, "Lập chỉ mục hoàn tất.", ct);
+            await notifier.NotifyAsync(document.Id, document.Status, 100, "Lập chỉ mục hoàn tất.", ct);
         }
         catch (Exception ex)
         {
             document.Status = DocumentStatus.Failed;
             document.FailureReason = ex.Message.Length > 900 ? ex.Message[..900] : ex.Message;
             await documents.UpdateAsync(document, ct);
-            await notifier.NotifyAsync(document.Id, document.Status, document.FailureReason, ct);
+            await notifier.NotifyAsync(document.Id, document.Status, 100, document.FailureReason, ct);
         }
     }
 

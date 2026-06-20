@@ -7,9 +7,15 @@ using ChatBoxPRJ.Hubs;
 using ChatBoxPRJ.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+// Chừa dung lượng cho phần header/boundary của multipart; DocumentService vẫn giới hạn file ở đúng 100 MB.
+const long MaxUploadRequestSize = 110L * 1024 * 1024;
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = MaxUploadRequestSize);
+builder.Services.Configure<IISServerOptions>(options => options.MaxRequestBodySize = MaxUploadRequestSize);
+builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = MaxUploadRequestSize);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "App_Data", "Keys")));
