@@ -30,7 +30,7 @@ public sealed class LoginModel(IAccountService accounts) : PageModel
         if (!string.IsNullOrWhiteSpace(ReturnUrl) && Url.IsLocalUrl(ReturnUrl)) return LocalRedirect(ReturnUrl);
         return user.Role switch
         {
-            UserRole.Student => RedirectToPage("/Student/Chat"),
+            UserRole.Student => RedirectToPage("/Student/Courses"),
             UserRole.Lecturer => RedirectToPage("/Lecturer/Documents"),
             _ => RedirectToPage("/Admin/Index")
         };

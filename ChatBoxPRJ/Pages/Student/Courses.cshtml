@@ -1,0 +1,70 @@
+@page
+@model ChatBoxPRJ.Pages.Student.CoursesModel
+@{ ViewData["Title"] = "Danh sách môn học"; }
+
+<div class="student-course-heading">
+    <div>
+        <span class="eyebrow">STUDENT COURSE LIBRARY</span>
+        <h1>Danh sách môn học</h1>
+        <p>Khám phá tất cả môn học do quản trị viên tạo và tải tài liệu học tập về máy.</p>
+    </div>
+    <form method="get" class="course-code-search">
+        <label for="Search">Tìm theo mã môn học</label>
+        <div>
+            <input asp-for="Search" class="form-control" placeholder="Ví dụ: PRN222" autocomplete="off" />
+            <button class="btn btn-primary" type="submit">Tìm kiếm</button>
+            @if (!string.IsNullOrWhiteSpace(Model.Search)) {
+                <a class="btn btn-outline-secondary" asp-page="/Student/Courses">Xóa lọc</a>
+            }
+        </div>
+    </form>
+</div>
+
+<div class="student-course-layout">
+    <section class="student-course-grid" aria-label="Danh sách môn học">
+        @foreach (var course in Model.Courses) {
+            <a class="student-course-card @(Model.CourseId == course.Id ? "active" : "")"
+               asp-page="/Student/Courses" asp-route-courseId="@course.Id" asp-route-search="@Model.Search">
+                <span class="student-course-code">@course.Code</span>
+                <h2>@course.Name</h2>
+                <p>@(string.IsNullOrWhiteSpace(course.Description) ? "Chưa có mô tả môn học." : course.Description)</p>
+                <footer><span>@course.Credits tín chỉ</span><b>Xem tài liệu →</b></footer>
+            </a>
+        }
+        @if (!Model.Courses.Any()) {
+            <div class="panel student-course-empty">
+                <span>⌕</span><h2>Không tìm thấy môn học</h2>
+                <p>Không có mã môn nào khớp với “@Model.Search”.</p>
+                <a asp-page="/Student/Courses">Xem tất cả môn học</a>
+            </div>
+        }
+    </section>
+
+    <aside class="panel student-document-panel">
+        @if (Model.SelectedCourse is null) {
+            <div class="student-document-placeholder">
+                <span>📚</span><h2>Chọn một môn học</h2>
+                <p>Bấm vào môn học bên trái để xem các tài liệu đã được giảng viên trưởng bộ môn upload.</p>
+            </div>
+        } else {
+            <div class="student-document-title">
+                <div><span class="eyebrow">@Model.SelectedCourse.Code</span><h2>@Model.SelectedCourse.Name</h2></div>
+                <span class="count-pill">@Model.Documents.Count tài liệu</span>
+            </div>
+            <div class="student-document-list">
+                @foreach (var document in Model.Documents) {
+                    <article>
+                        <span class="student-file-icon">📄</span>
+                        <div><b>@document.FileName</b><small>Đăng ngày @document.UploadedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</small></div>
+                        <a class="btn btn-sm btn-outline-primary" asp-page-handler="Download"
+                           asp-route-documentId="@document.Id" asp-route-courseId="@document.CourseId">Tải xuống</a>
+                    </article>
+                }
+                @if (!Model.Documents.Any()) {
+                    <div class="student-document-placeholder compact"><span>📭</span><h3>Chưa có tài liệu</h3><p>Môn học này chưa có tài liệu đã xử lý hoàn thành.</p></div>
+                }
+            </div>
+            <a class="btn btn-primary student-chat-link" asp-page="/Student/Chat" asp-route-courseId="@Model.SelectedCourse.Id">Hỏi đáp về môn học</a>
+        }
+    </aside>
+</div>
