@@ -18,14 +18,14 @@ else {
         @if (m.Citations.Any()) { <div class="citations"><b>Nguồn trích dẫn tài liệu</b>@foreach (var c in m.Citations) { <details><summary><span>📎 @c.FileName</span><small>Trang @c.PageNumber · Đoạn @c.ChunkNumber</small></summary><p>@c.Excerpt</p></details> }</div> }
     </div></article> }
 </section>
-<footer class="composer">@if (Model.CanChat) { <form method="post" asp-page-handler="Ask" id="chatForm"><input type="hidden" asp-for="CourseId"/><input type="hidden" asp-for="DocumentId"/><textarea asp-for="Question" rows="1" placeholder="Đặt câu hỏi trong tài liệu đã chọn…" required></textarea><button title="Gửi câu hỏi">➤</button></form><small>Trợ lý chỉ tìm kiếm trong tài liệu đang chọn.</small> } else if (Model.DocumentId.HasValue) { <div class="select-document-notice">Tài liệu nguồn đã bị xóa. Bạn vẫn có thể xem hoặc xóa lịch sử này.</div> } else { <div class="select-document-notice">← Hãy chọn một tài liệu nguồn trước khi chat</div> }</footer>
+<footer class="composer">@if (Model.CanChat) { <form method="post" asp-page-handler="Ask" id="chatForm"><input type="hidden" asp-for="CourseId"/><input type="hidden" asp-for="DocumentId"/><input type="hidden" asp-for="ConversationId"/><textarea asp-for="Question" rows="1" placeholder="Đặt câu hỏi trong tài liệu đã chọn…" required></textarea><button title="Gửi câu hỏi">➤</button></form><small>Trợ lý chỉ tìm kiếm trong tài liệu đang chọn.</small> } else if (Model.DocumentId.HasValue) { <div class="select-document-notice">Tài liệu nguồn đã bị xóa. Bạn vẫn có thể xem hoặc xóa lịch sử này.</div> } else { <div class="select-document-notice">← Hãy chọn một tài liệu nguồn trước khi chat</div> }</footer>
 }
 </main>
 <aside class="document-sidebar">
 @if (Model.Workspace is not null) {
     <section class="history-section">
         <div class="sidebar-section-title">
-            <div><span class="eyebrow">LỊCH SỬ</span><h2>Hội thoại gần đây</h2></div>
+            <div><span class="eyebrow">LỊCH SỬ</span><h2>Hội thoại gần đây</h2><a class="new-chat-link" asp-page="/Student/Chat" asp-route-courseId="@Model.CourseId">+ Đoạn chat mới</a></div>
             @if (Model.Workspace.Histories.Any()) {
                 <form method="post" asp-page-handler="DeleteHistory" onsubmit="return confirm('Xóa toàn bộ lịch sử hội thoại của môn học này?')">
                     <input type="hidden" asp-for="CourseId" />
@@ -36,15 +36,16 @@ else {
         </div>
         <div class="history-list">
         @foreach (var history in Model.Workspace.Histories) {
-            <div class="history-item @(Model.DocumentId == history.DocumentId ? "active" : "")">
+            <div class="history-item @(Model.ConversationId == history.ConversationId ? "active" : "")">
                 <div>
-                    <a asp-page="/Student/Chat" asp-route-courseId="@Model.CourseId" asp-route-documentId="@history.DocumentId">@history.FileName</a>
-                    <small>@history.MessageCount tin nhắn · @history.UpdatedAtUtc.ToLocalTime().ToString("dd/MM HH:mm")</small>
+                    <a asp-page="/Student/Chat" asp-route-courseId="@Model.CourseId" asp-route-documentId="@history.DocumentId" asp-route-conversationId="@history.ConversationId">@history.Title</a>
+                    <small>@history.FileName · @history.MessageCount tin · @history.UpdatedAtUtc.ToLocalTime().ToString("dd/MM HH:mm")</small>
                 </div>
                 <form method="post" asp-page-handler="DeleteHistory" onsubmit="return confirm('Xóa lịch sử hội thoại này?')">
                     <input type="hidden" asp-for="CourseId" />
                     <input type="hidden" asp-for="DocumentId" />
-                    <input type="hidden" name="historyDocumentId" value="@history.DocumentId" />
+                    <input type="hidden" asp-for="ConversationId" />
+                    <input type="hidden" name="historyConversationId" value="@history.ConversationId" />
                     <button title="Xóa lịch sử">×</button>
                 </form>
             </div>

@@ -42,10 +42,10 @@ public interface IDocumentRepository
 public interface IChatRepository
 {
     Task<ChatSession> GetOrCreateSessionAsync(Guid studentId, Guid courseId, CancellationToken ct = default);
-    Task<IReadOnlyList<ChatMessage>> GetMessagesAsync(Guid sessionId, Guid? documentId = null, CancellationToken ct = default);
+    Task<IReadOnlyList<ChatMessage>> GetMessagesAsync(Guid sessionId, Guid? conversationId = null, CancellationToken ct = default);
     Task<IReadOnlyList<ChatHistorySummary>> GetHistoriesAsync(Guid sessionId, CancellationToken ct = default);
     Task AddMessageAsync(ChatMessage message, CancellationToken ct = default);
-    Task<int> DeleteMessagesAsync(Guid sessionId, Guid? documentId = null, CancellationToken ct = default);
+    Task<int> DeleteMessagesAsync(Guid sessionId, Guid? conversationId = null, CancellationToken ct = default);
 }
 
 public interface IVectorStore

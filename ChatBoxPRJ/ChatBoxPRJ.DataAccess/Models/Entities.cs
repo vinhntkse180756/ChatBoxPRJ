@@ -83,6 +83,7 @@ public sealed class ChatMessage
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid SessionId { get; set; }
     public ChatSession Session { get; set; } = null!;
+    public Guid ConversationId { get; set; } = Guid.NewGuid();
     public MessageRole Role { get; set; }
     public Guid? DocumentId { get; set; }
     public string Content { get; set; } = "";
@@ -100,6 +101,8 @@ public sealed record RetrievedChunk(
     double Score);
 
 public sealed record ChatHistorySummary(
+    Guid ConversationId,
     Guid DocumentId,
+    string Title,
     int MessageCount,
     DateTime UpdatedAtUtc);

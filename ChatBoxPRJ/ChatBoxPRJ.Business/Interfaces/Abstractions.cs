@@ -67,7 +67,7 @@ public interface IDocumentService
 
 public interface IChatService
 {
-    Task<ChatWorkspaceDto?> OpenWorkspaceAsync(Guid userId, UserRole role, Guid courseId, Guid? documentId = null, CancellationToken ct = default);
-    Task<ChatAnswer> AskAsync(Guid userId, UserRole role, Guid courseId, Guid documentId, string question, CancellationToken ct = default);
-    Task<(bool Success, string Message)> DeleteHistoryAsync(Guid userId, UserRole role, Guid courseId, Guid? documentId = null, CancellationToken ct = default);
+    Task<ChatWorkspaceDto?> OpenWorkspaceAsync(Guid userId, UserRole role, Guid courseId, Guid? conversationId = null, CancellationToken ct = default);
+    Task<ChatAnswer> AskAsync(Guid userId, UserRole role, Guid courseId, Guid? conversationId, Guid documentId, string question, CancellationToken ct = default);
+    Task<(bool Success, string Message)> DeleteHistoryAsync(Guid userId, UserRole role, Guid courseId, Guid? conversationId = null, CancellationToken ct = default);
 }

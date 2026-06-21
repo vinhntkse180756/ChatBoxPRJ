@@ -31,6 +31,6 @@ public sealed class ChatBoxDbContext(DbContextOptions<ChatBoxDbContext> options)
         model.Entity<DocumentChunk>().HasOne(x => x.Document).WithMany(x => x.Chunks).HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Cascade);
         model.Entity<ChatSession>().HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
         model.Entity<ChatMessage>().HasOne(x => x.Session).WithMany(x => x.Messages).HasForeignKey(x => x.SessionId).OnDelete(DeleteBehavior.Cascade);
-        model.Entity<ChatMessage>().HasIndex(x => new { x.SessionId, x.DocumentId, x.CreatedAtUtc });
+        model.Entity<ChatMessage>().HasIndex(x => new { x.SessionId, x.ConversationId, x.CreatedAtUtc });
     }
 }

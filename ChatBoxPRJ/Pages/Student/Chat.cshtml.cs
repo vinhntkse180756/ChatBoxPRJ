@@ -10,6 +10,7 @@ public sealed class ChatModel(ICourseService courses, IChatService chat, IDocume
 {
     [BindProperty(SupportsGet = true)] public Guid? CourseId { get; set; }
     [BindProperty(SupportsGet = true)] public Guid? DocumentId { get; set; }
+    [BindProperty(SupportsGet = true)] public Guid? ConversationId { get; set; }
     [BindProperty] public string Question { get; set; } = "";
     public IReadOnlyList<CourseDto> Courses { get; set; } = [];
     public ChatWorkspaceDto? Workspace { get; set; }
@@ -20,13 +21,13 @@ public sealed class ChatModel(ICourseService courses, IChatService chat, IDocume
     public async Task<IActionResult> OnPostAskAsync()
     {
         if (!CourseId.HasValue || !DocumentId.HasValue) return RedirectToPage(new { courseId = CourseId });
-        await chat.AskAsync(User.UserId(), User.UserRole(), CourseId.Value, DocumentId.Value, Question, HttpContext.RequestAborted);
-        return RedirectToPage(new { courseId = CourseId, documentId = DocumentId });
+        var result = await chat.AskAsync(User.UserId(), User.UserRole(), CourseId.Value, ConversationId, DocumentId.Value, Question, HttpContext.RequestAborted);
+        return RedirectToPage(new { courseId = CourseId, documentId = DocumentId, conversationId = result.ConversationId ?? ConversationId });
     }
 
-    public async Task<IActionResult> OnPostDeleteHistoryAsync(Guid? historyDocumentId, bool all = false)
+    public async Task<IActionResult> OnPostDeleteHistoryAsync(Guid? historyConversationId, bool all = false)
     {
-        if (!CourseId.HasValue || (!all && !historyDocumentId.HasValue))
+        if (!CourseId.HasValue || (!all && !historyConversationId.HasValue))
         {
             Flash = "Yêu cầu xóa lịch sử không hợp lệ.";
             FlashType = "danger";
@@ -37,12 +38,17 @@ public sealed class ChatModel(ICourseService courses, IChatService chat, IDocume
             User.UserId(),
             User.UserRole(),
             CourseId.Value,
-            all ? null : historyDocumentId,
+            all ? null : historyConversationId,
             HttpContext.RequestAborted);
         Flash = result.Message;
         FlashType = result.Success ? "success" : "danger";
-        var selectedDocumentId = all || DocumentId == historyDocumentId ? null : DocumentId;
-        return RedirectToPage(new { courseId = CourseId, documentId = selectedDocumentId });
+        var deletedActiveConversation = all || ConversationId == historyConversationId;
+        return RedirectToPage(new
+        {
+            courseId = CourseId,
+            documentId = deletedActiveConversation ? null : DocumentId,
+            conversationId = deletedActiveConversation ? null : ConversationId
+        });
     }
     public async Task<IActionResult> OnGetFileAsync(Guid documentId, Guid courseId)
     {
@@ -59,8 +65,14 @@ public sealed class ChatModel(ICourseService courses, IChatService chat, IDocume
             : await courses.ListAsync(HttpContext.RequestAborted);
         if (CourseId.HasValue && Courses.All(x => x.Id != CourseId.Value)) CourseId = null;
         CourseId ??= Courses.FirstOrDefault()?.Id;
-        if (CourseId.HasValue) Workspace = await chat.OpenWorkspaceAsync(User.UserId(), User.UserRole(), CourseId.Value, DocumentId, HttpContext.RequestAborted);
-        if (Workspace is not null && DocumentId.HasValue
+        if (CourseId.HasValue) Workspace = await chat.OpenWorkspaceAsync(User.UserId(), User.UserRole(), CourseId.Value, ConversationId, HttpContext.RequestAborted);
+        if (Workspace is not null && ConversationId.HasValue)
+        {
+            var activeHistory = Workspace.Histories.FirstOrDefault(x => x.ConversationId == ConversationId.Value);
+            if (activeHistory is null) ConversationId = null;
+            else DocumentId = activeHistory.DocumentId;
+        }
+        if (Workspace is not null && !ConversationId.HasValue && DocumentId.HasValue
             && Workspace.Documents.All(x => x.Id != DocumentId.Value)
             && Workspace.Histories.All(x => x.DocumentId != DocumentId.Value)) DocumentId = null;
     }

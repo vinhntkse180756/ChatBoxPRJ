@@ -140,10 +140,10 @@ public sealed class ChatRepository(ChatBoxDbContext db) : IChatRepository
         await db.SaveChangesAsync(ct);
         return session;
     }
-    public async Task<IReadOnlyList<ChatMessage>> GetMessagesAsync(Guid sessionId, Guid? documentId = null, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ChatMessage>> GetMessagesAsync(Guid sessionId, Guid? conversationId = null, CancellationToken ct = default)
     {
         var query = db.ChatMessages.AsNoTracking().Where(x => x.SessionId == sessionId);
-        if (documentId.HasValue) query = query.Where(x => x.DocumentId == documentId);
+        if (conversationId.HasValue) query = query.Where(x => x.ConversationId == conversationId);
         return await query.OrderBy(x => x.CreatedAtUtc).ToListAsync(ct);
     }
 
@@ -151,11 +151,25 @@ public sealed class ChatRepository(ChatBoxDbContext db) : IChatRepository
     {
         var messages = await db.ChatMessages.AsNoTracking()
             .Where(x => x.SessionId == sessionId && x.DocumentId.HasValue)
-            .Select(x => new { DocumentId = x.DocumentId!.Value, x.CreatedAtUtc })
+            .Select(x => new { x.ConversationId, DocumentId = x.DocumentId!.Value, x.Role, x.Content, x.CreatedAtUtc })
             .ToListAsync(ct);
         return messages
-            .GroupBy(x => x.DocumentId)
-            .Select(group => new ChatHistorySummary(group.Key, group.Count(), group.Max(x => x.CreatedAtUtc)))
+            .GroupBy(x => x.ConversationId)
+            .Select(group =>
+            {
+                var firstQuestion = group
+                    .Where(x => x.Role == MessageRole.User)
+                    .OrderBy(x => x.CreatedAtUtc)
+                    .Select(x => x.Content.Trim())
+                    .FirstOrDefault() ?? "Cuộc trò chuyện";
+                var title = firstQuestion.Length <= 70 ? firstQuestion : firstQuestion[..70] + "…";
+                return new ChatHistorySummary(
+                    group.Key,
+                    group.Select(x => x.DocumentId).First(),
+                    title,
+                    group.Count(),
+                    group.Max(x => x.CreatedAtUtc));
+            })
             .OrderByDescending(x => x.UpdatedAtUtc)
             .ToList();
     }
@@ -168,10 +182,10 @@ public sealed class ChatRepository(ChatBoxDbContext db) : IChatRepository
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task<int> DeleteMessagesAsync(Guid sessionId, Guid? documentId = null, CancellationToken ct = default)
+    public async Task<int> DeleteMessagesAsync(Guid sessionId, Guid? conversationId = null, CancellationToken ct = default)
     {
         var query = db.ChatMessages.Where(x => x.SessionId == sessionId);
-        if (documentId.HasValue) query = query.Where(x => x.DocumentId == documentId);
+        if (conversationId.HasValue) query = query.Where(x => x.ConversationId == conversationId);
         var messages = await query.ToListAsync(ct);
         if (messages.Count == 0) return 0;
         db.ChatMessages.RemoveRange(messages);
