@@ -48,8 +48,10 @@ public interface ICourseService
     Task<(bool Success, string Message)> DeleteAsync(Guid id, CancellationToken ct = default);
     Task<IReadOnlyList<CourseDto>> ListAsync(CancellationToken ct = default);
     Task<IReadOnlyList<CourseDto>> ListForLecturerAsync(Guid lecturerId, CancellationToken ct = default);
-    Task<IReadOnlySet<Guid>> GetAssignmentsAsync(Guid lecturerId, CancellationToken ct = default);
-    Task<(bool Success, string Message)> SaveAssignmentsAsync(Guid lecturerId, IReadOnlySet<Guid> courseIds, CancellationToken ct = default);
+    Task<IReadOnlyDictionary<Guid, LecturerAccessLevel>> GetAssignmentsAsync(Guid lecturerId, CancellationToken ct = default);
+    Task<(bool Success, string Message)> SaveAssignmentsAsync(Guid lecturerId, IReadOnlyDictionary<Guid, LecturerAccessLevel> assignments, CancellationToken ct = default);
+    Task<LecturerAccessLevel?> GetLecturerAccessLevelAsync(Guid lecturerId, Guid courseId, CancellationToken ct = default);
+    Task<bool> CanAccessAsync(Guid userId, UserRole role, Guid courseId, CancellationToken ct = default);
     Task<bool> CanManageAsync(Guid userId, UserRole role, Guid courseId, CancellationToken ct = default);
 }
 
@@ -60,11 +62,12 @@ public interface IDocumentService
     Task<IReadOnlyList<DocumentDto>> ListAsync(Guid? courseId, bool completedOnly, CancellationToken ct = default);
     Task<DocumentChunksDto?> GetChunksAsync(Guid documentId, Guid actorId, UserRole role, CancellationToken ct = default);
     Task<(bool Success, string Message)> DeleteAsync(Guid documentId, Guid actorId, UserRole role, CancellationToken ct = default);
-    Task<(string Path, string FileName, string ContentType)?> GetStudentFileAsync(Guid documentId, Guid courseId, CancellationToken ct = default);
+    Task<(string Path, string FileName, string ContentType)?> GetFileAsync(Guid documentId, Guid courseId, Guid actorId, UserRole role, CancellationToken ct = default);
 }
 
 public interface IChatService
 {
-    Task<ChatWorkspaceDto?> OpenWorkspaceAsync(Guid studentId, Guid courseId, Guid? documentId = null, CancellationToken ct = default);
-    Task<ChatAnswer> AskAsync(Guid studentId, Guid courseId, Guid documentId, string question, CancellationToken ct = default);
+    Task<ChatWorkspaceDto?> OpenWorkspaceAsync(Guid userId, UserRole role, Guid courseId, Guid? documentId = null, CancellationToken ct = default);
+    Task<ChatAnswer> AskAsync(Guid userId, UserRole role, Guid courseId, Guid documentId, string question, CancellationToken ct = default);
+    Task<(bool Success, string Message)> DeleteHistoryAsync(Guid userId, UserRole role, Guid courseId, Guid? documentId = null, CancellationToken ct = default);
 }

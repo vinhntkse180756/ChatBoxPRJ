@@ -12,7 +12,7 @@
     @if (User.Identity?.IsAuthenticated == true) {
         @if (User.IsInRole("Student")) { <a asp-page="/Student/Chat">Hỏi đáp</a> }
         @if (User.IsInRole("Admin")) { <a asp-page="/Admin/Index">Quản trị</a><a asp-page="/Admin/Assignments">Phân quyền</a> }
-        @if (User.IsInRole("Lecturer")) { <a asp-page="/Lecturer/Documents">Tài liệu</a> }
+        @if (User.IsInRole("Lecturer")) { <a asp-page="/Lecturer/Documents">Tài liệu</a><a asp-page="/Student/Chat">Hỏi đáp</a> }
         <span class="user-chip"><i>@User.Identity.Name?.FirstOrDefault()</i>@User.Identity.Name</span>
         <form method="post" asp-page="/Account/Logout"><button class="link-button">Đăng xuất</button></form>
     } else { <a asp-page="/Account/Login">Đăng nhập</a><a class="nav-cta" asp-page="/Account/Register">Đăng ký</a> }

@@ -23,8 +23,13 @@ public sealed class UserRepository(ChatBoxDbContext db) : IUserRepository
         var user = await db.Users.FirstOrDefaultAsync(x => x.Id == id && x.Role == UserRole.Lecturer, ct);
         if (user is null) return [];
         var docs = await db.Documents.Where(x => x.UploadedById == id).ToListAsync(ct);
+        var chatSessions = await db.ChatSessions.Where(x => x.StudentId == id).ToListAsync(ct);
         var paths = docs.Select(x => x.StoragePath).ToList();
-        db.Documents.RemoveRange(docs); db.Users.Remove(user); await db.SaveChangesAsync(ct); return paths;
+        db.Documents.RemoveRange(docs);
+        db.ChatSessions.RemoveRange(chatSessions);
+        db.Users.Remove(user);
+        await db.SaveChangesAsync(ct);
+        return paths;
     }
 }
 
@@ -42,34 +47,56 @@ public sealed class CourseRepository(ChatBoxDbContext db) : ICourseRepository
         var paths = course.Documents.Select(x => x.StoragePath).ToList(); db.Courses.Remove(course); await db.SaveChangesAsync(ct); return paths;
     }
     public Task<bool> CodeExistsAsync(string code, CancellationToken ct = default) => db.Courses.AnyAsync(x => x.Code == code, ct);
-    public async Task<IReadOnlySet<Guid>> GetLecturerCourseIdsAsync(Guid lecturerId, CancellationToken ct = default)
-        => (await db.LecturerCourses.AsNoTracking().Where(x => x.LecturerId == lecturerId).Select(x => x.CourseId).ToListAsync(ct)).ToHashSet();
-    public Task<Guid?> GetCourseHeadAsync(Guid courseId, CancellationToken ct = default)
-        => db.LecturerCourses.Where(x => x.CourseId == courseId).Select(x => (Guid?)x.LecturerId).FirstOrDefaultAsync(ct);
+    public async Task<IReadOnlyDictionary<Guid, LecturerAccessLevel>> GetLecturerAssignmentsAsync(Guid lecturerId, CancellationToken ct = default)
+        => await db.LecturerCourses.AsNoTracking()
+            .Where(x => x.LecturerId == lecturerId)
+            .ToDictionaryAsync(x => x.CourseId, x => x.AccessLevel, ct);
 
-    public async Task ReplaceLecturerCoursesAsync(Guid lecturerId, IReadOnlySet<Guid> courseIds, CancellationToken ct = default)
+    public Task<LecturerAccessLevel?> GetLecturerAccessLevelAsync(Guid lecturerId, Guid courseId, CancellationToken ct = default)
+        => db.LecturerCourses.AsNoTracking()
+            .Where(x => x.LecturerId == lecturerId && x.CourseId == courseId)
+            .Select(x => (LecturerAccessLevel?)x.AccessLevel)
+            .FirstOrDefaultAsync(ct);
+
+    public async Task ReplaceLecturerCoursesAsync(Guid lecturerId, IReadOnlyDictionary<Guid, LecturerAccessLevel> assignments, CancellationToken ct = default)
     {
         var strategy = db.Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async () =>
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
+            if (!await db.Users.AnyAsync(x => x.Id == lecturerId && x.Role == UserRole.Lecturer, ct))
+                throw new InvalidOperationException("Không tìm thấy giảng viên.");
+            var assignedCourseIds = assignments.Keys.ToHashSet();
+            var existingCourseCount = await db.Courses.CountAsync(x => assignedCourseIds.Contains(x.Id), ct);
+            if (existingCourseCount != assignedCourseIds.Count)
+                throw new InvalidOperationException("Một hoặc nhiều môn học không tồn tại.");
+
             var old = await db.LecturerCourses
                 .Where(x => x.LecturerId == lecturerId)
                 .ToListAsync(ct);
             var oldIds = old.Select(x => x.CourseId).ToHashSet();
+            var courseHeadIds = assignments
+                .Where(x => x.Value == LecturerAccessLevel.CourseHead)
+                .Select(x => x.Key)
+                .ToHashSet();
 
             var occupied = await db.LecturerCourses.AsNoTracking()
-                .Where(x => courseIds.Contains(x.CourseId) && x.LecturerId != lecturerId)
+                .Where(x => courseHeadIds.Contains(x.CourseId)
+                    && x.LecturerId != lecturerId
+                    && x.AccessLevel == LecturerAccessLevel.CourseHead)
                 .Select(x => x.CourseId).ToListAsync(ct);
             if (occupied.Count > 0) throw new InvalidOperationException("Một hoặc nhiều môn đã có trưởng bộ môn.");
 
-            db.LecturerCourses.RemoveRange(old.Where(x => !courseIds.Contains(x.CourseId)));
-            db.LecturerCourses.AddRange(courseIds
+            db.LecturerCourses.RemoveRange(old.Where(x => !assignedCourseIds.Contains(x.CourseId)));
+            foreach (var current in old.Where(x => assignments.ContainsKey(x.CourseId)))
+                current.AccessLevel = assignments[current.CourseId];
+            db.LecturerCourses.AddRange(assignedCourseIds
                 .Where(courseId => !oldIds.Contains(courseId))
                 .Select(courseId => new LecturerCourse
                 {
                     LecturerId = lecturerId,
-                    CourseId = courseId
+                    CourseId = courseId,
+                    AccessLevel = assignments[courseId]
                 }));
 
             await db.SaveChangesAsync(ct);
@@ -119,12 +146,39 @@ public sealed class ChatRepository(ChatBoxDbContext db) : IChatRepository
         if (documentId.HasValue) query = query.Where(x => x.DocumentId == documentId);
         return await query.OrderBy(x => x.CreatedAtUtc).ToListAsync(ct);
     }
+
+    public async Task<IReadOnlyList<ChatHistorySummary>> GetHistoriesAsync(Guid sessionId, CancellationToken ct = default)
+    {
+        var messages = await db.ChatMessages.AsNoTracking()
+            .Where(x => x.SessionId == sessionId && x.DocumentId.HasValue)
+            .Select(x => new { DocumentId = x.DocumentId!.Value, x.CreatedAtUtc })
+            .ToListAsync(ct);
+        return messages
+            .GroupBy(x => x.DocumentId)
+            .Select(group => new ChatHistorySummary(group.Key, group.Count(), group.Max(x => x.CreatedAtUtc)))
+            .OrderByDescending(x => x.UpdatedAtUtc)
+            .ToList();
+    }
+
     public async Task AddMessageAsync(ChatMessage message, CancellationToken ct = default)
     {
         db.ChatMessages.Add(message);
         var session = await db.ChatSessions.FindAsync([message.SessionId], ct);
         if (session is not null) session.UpdatedAtUtc = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<int> DeleteMessagesAsync(Guid sessionId, Guid? documentId = null, CancellationToken ct = default)
+    {
+        var query = db.ChatMessages.Where(x => x.SessionId == sessionId);
+        if (documentId.HasValue) query = query.Where(x => x.DocumentId == documentId);
+        var messages = await query.ToListAsync(ct);
+        if (messages.Count == 0) return 0;
+        db.ChatMessages.RemoveRange(messages);
+        var session = await db.ChatSessions.FindAsync([sessionId], ct);
+        if (session is not null) session.UpdatedAtUtc = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return messages.Count;
     }
 }
 

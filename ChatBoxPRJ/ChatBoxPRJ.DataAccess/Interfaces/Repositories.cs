@@ -22,9 +22,9 @@ public interface ICourseRepository
     Task UpdateAsync(Course course, CancellationToken ct = default);
     Task<IReadOnlyList<string>> DeleteAsync(Guid id, CancellationToken ct = default);
     Task<bool> CodeExistsAsync(string code, CancellationToken ct = default);
-    Task<IReadOnlySet<Guid>> GetLecturerCourseIdsAsync(Guid lecturerId, CancellationToken ct = default);
-    Task ReplaceLecturerCoursesAsync(Guid lecturerId, IReadOnlySet<Guid> courseIds, CancellationToken ct = default);
-    Task<Guid?> GetCourseHeadAsync(Guid courseId, CancellationToken ct = default);
+    Task<IReadOnlyDictionary<Guid, LecturerAccessLevel>> GetLecturerAssignmentsAsync(Guid lecturerId, CancellationToken ct = default);
+    Task ReplaceLecturerCoursesAsync(Guid lecturerId, IReadOnlyDictionary<Guid, LecturerAccessLevel> assignments, CancellationToken ct = default);
+    Task<LecturerAccessLevel?> GetLecturerAccessLevelAsync(Guid lecturerId, Guid courseId, CancellationToken ct = default);
 }
 
 public interface IDocumentRepository
@@ -43,7 +43,9 @@ public interface IChatRepository
 {
     Task<ChatSession> GetOrCreateSessionAsync(Guid studentId, Guid courseId, CancellationToken ct = default);
     Task<IReadOnlyList<ChatMessage>> GetMessagesAsync(Guid sessionId, Guid? documentId = null, CancellationToken ct = default);
+    Task<IReadOnlyList<ChatHistorySummary>> GetHistoriesAsync(Guid sessionId, CancellationToken ct = default);
     Task AddMessageAsync(ChatMessage message, CancellationToken ct = default);
+    Task<int> DeleteMessagesAsync(Guid sessionId, Guid? documentId = null, CancellationToken ct = default);
 }
 
 public interface IVectorStore

@@ -5,6 +5,7 @@ namespace ChatBoxPRJ.DataAccess.Models;
 public enum UserRole { Student, Lecturer, Admin }
 public enum DocumentStatus { Processing, Completed, Failed }
 public enum MessageRole { User, Assistant }
+public enum LecturerAccessLevel { Lecturer, CourseHead }
 
 public sealed class AppUser
 {
@@ -35,6 +36,7 @@ public sealed class LecturerCourse
     public AppUser Lecturer { get; set; } = null!;
     public Guid CourseId { get; set; }
     public Course Course { get; set; } = null!;
+    public LecturerAccessLevel AccessLevel { get; set; } = LecturerAccessLevel.Lecturer;
 }
 
 public sealed class LearningDocument
@@ -96,3 +98,8 @@ public sealed record RetrievedChunk(
     int ChunkNumber,
     string Content,
     double Score);
+
+public sealed record ChatHistorySummary(
+    Guid DocumentId,
+    int MessageCount,
+    DateTime UpdatedAtUtc);

@@ -33,13 +33,24 @@ public sealed class CourseService(ICourseRepository courses, IMapper mapper) : I
     }
     public async Task<IReadOnlyList<CourseDto>> ListAsync(CancellationToken ct = default) => mapper.Map<IReadOnlyList<CourseDto>>(await courses.ListAsync(ct));
     public async Task<IReadOnlyList<CourseDto>> ListForLecturerAsync(Guid lecturerId, CancellationToken ct = default) => mapper.Map<IReadOnlyList<CourseDto>>(await courses.ListForLecturerAsync(lecturerId, ct));
-    public Task<IReadOnlySet<Guid>> GetAssignmentsAsync(Guid lecturerId, CancellationToken ct = default) => courses.GetLecturerCourseIdsAsync(lecturerId, ct);
-    public async Task<(bool Success, string Message)> SaveAssignmentsAsync(Guid lecturerId, IReadOnlySet<Guid> courseIds, CancellationToken ct = default)
+    public Task<IReadOnlyDictionary<Guid, LecturerAccessLevel>> GetAssignmentsAsync(Guid lecturerId, CancellationToken ct = default)
+        => courses.GetLecturerAssignmentsAsync(lecturerId, ct);
+    public async Task<(bool Success, string Message)> SaveAssignmentsAsync(Guid lecturerId, IReadOnlyDictionary<Guid, LecturerAccessLevel> assignments, CancellationToken ct = default)
     {
-        try { await courses.ReplaceLecturerCoursesAsync(lecturerId, courseIds, ct); }
+        if (assignments.Values.Any(x => !Enum.IsDefined(x))) return (false, "Cấp quyền môn học không hợp lệ.");
+        try { await courses.ReplaceLecturerCoursesAsync(lecturerId, assignments, ct); }
         catch (InvalidOperationException ex) { return (false, ex.Message); }
-        return (true, "Đã lưu phân công trưởng bộ môn.");
+        return (true, "Đã lưu phân quyền môn học cho giảng viên.");
     }
+
+    public Task<LecturerAccessLevel?> GetLecturerAccessLevelAsync(Guid lecturerId, Guid courseId, CancellationToken ct = default)
+        => courses.GetLecturerAccessLevelAsync(lecturerId, courseId, ct);
+
+    public async Task<bool> CanAccessAsync(Guid userId, UserRole role, Guid courseId, CancellationToken ct = default)
+        => role == UserRole.Student
+            || role == UserRole.Lecturer && await courses.GetLecturerAccessLevelAsync(userId, courseId, ct) is not null;
+
     public async Task<bool> CanManageAsync(Guid userId, UserRole role, Guid courseId, CancellationToken ct = default)
-        => role == UserRole.Lecturer && await courses.GetCourseHeadAsync(courseId, ct) == userId;
+        => role == UserRole.Lecturer
+            && await courses.GetLecturerAccessLevelAsync(userId, courseId, ct) == LecturerAccessLevel.CourseHead;
 }

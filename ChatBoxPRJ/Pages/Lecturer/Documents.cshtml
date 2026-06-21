@@ -2,11 +2,14 @@
 @using ChatBoxPRJ.DataAccess.Models
 @model ChatBoxPRJ.Pages.Lecturer.DocumentsModel
 @{ ViewData["Title"] = "Kho tài liệu"; }
-<div class="page-heading"><div><span class="eyebrow">KNOWLEDGE PIPELINE</span><h1>Quản lý tài liệu</h1><p>Upload, trích xuất, chunk và lập chỉ mục tri thức theo đúng phạm vi môn học.</p></div><span class="live-pill"><i></i> Theo dõi trực tiếp</span></div>
-@if (Model.Flash is not null) { <div class="alert alert-info">@Model.Flash</div> }
-<div class="document-layout"><aside class="panel upload-panel"><h2>Bắt đầu xử lý</h2>
+<div class="page-heading"><div><span class="eyebrow">COURSE DOCUMENTS</span><h1>Tài liệu môn học</h1><p>Quyền thao tác được áp dụng theo phân công của quản trị viên trên từng môn.</p></div></div>
+@if (Model.Flash is not null) { <div class="alert alert-@(Model.FlashType ?? "info")" role="alert">@Model.Flash</div> }
+<div class="alert" id="documentNotification" role="alert" hidden></div>
+<div class="document-layout">
+@if (Model.UploadCourses.Any()) {
+<aside class="panel upload-panel"><h2>Bắt đầu xử lý</h2>
 <form method="post" enctype="multipart/form-data" asp-page-handler="Upload" class="form-stack" id="uploadForm">
-    <label asp-for="CourseId">Môn học được cấp quyền</label><select asp-for="CourseId" class="form-select" required><option value="">— Chọn môn —</option>@foreach (var c in Model.Courses) { <option value="@c.Id">@c.Code · @c.Name</option> }</select>
+    <label asp-for="UploadCourseId">Môn được cấp quyền upload</label><select asp-for="UploadCourseId" class="form-select" required><option value="">— Chọn môn —</option>@foreach (var c in Model.UploadCourses) { <option value="@c.Id">@c.Code · @c.Name</option> }</select>
     <label class="drop-zone"><span class="drop-icon">⇧</span><b>Chọn PDF, DOCX hoặc TXT</b><small>Tối đa 100 MB · PDF scan ảnh sẽ bị từ chối</small><input asp-for="UploadFile" accept=".pdf,.docx,.txt" required /></label>
     <label class="switch-row"><input asp-for="Overwrite" /><span>Ghi đè nếu trùng tên nhưng khác nội dung</span></label>
     <button class="btn btn-primary btn-lg" id="uploadButton">Bắt đầu xử lý</button>
@@ -16,10 +19,13 @@
     <div class="progress-track"><i id="uploadProgressBar"></i></div>
 </div>
 <div class="pipeline-note"><b>Pipeline</b><span>SHA-256 → Extract → Chunk → Embed → Index</span></div></aside>
-<section class="panel grow"><div class="panel-title"><div><h2>Tài liệu đã upload</h2><p>Chỉ file “Hoàn thành” mới xuất hiện với sinh viên.</p></div><form method="get"><select asp-for="CourseId" class="form-select" onchange="this.form.submit()"><option value="">Tất cả môn</option>@foreach (var c in Model.Courses) { <option value="@c.Id">@c.Code</option> }</select></form></div>
+} else if (Model.CourseId.HasValue) {
+<aside class="panel access-panel"><span class="eyebrow">QUYỀN HIỆN TẠI</span><h2>Giảng viên môn học</h2><p>Bạn có thể tải tài liệu hoàn thành và dùng chatbox. Chỉ trưởng bộ môn mới được upload, kiểm tra chunk hoặc xóa tài liệu.</p><a class="btn btn-outline-primary" asp-page="/Student/Chat" asp-route-courseId="@Model.CourseId">Mở chatbox</a></aside>
+}
+<section class="panel grow"><div class="panel-title"><div><h2>Tài liệu được cấp quyền</h2><p>@(Model.CanManageCourse ? "Theo dõi và quản lý toàn bộ trạng thái xử lý." : "Chỉ hiển thị tài liệu đã xử lý thành công.")</p></div><form method="get"><select asp-for="CourseId" class="form-select" onchange="this.form.submit()"><option value="">— Chọn môn —</option>@foreach (var c in Model.Courses) { <option value="@c.Id">@c.Code</option> }</select></form></div>
 <div class="table-wrap"><table class="data-table"><thead><tr><th>Tài liệu</th><th>Môn</th><th>Ngày tải</th><th>Trạng thái</th><th></th></tr></thead><tbody>
-@foreach (var d in Model.Documents) { var cls = d.Status.ToString().ToLowerInvariant(); <tr data-document-id="@d.Id"><td><div class="file-cell"><span>📄</span><div><b>@d.FileName</b>@if (d.FailureReason is not null) { <small title="@d.FailureReason">@d.FailureReason</small> }</div></div></td><td>@d.CourseName</td><td>@d.UploadedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td><td><span class="status @cls">@d.Status</span>@if (d.Status == DocumentStatus.Processing) { <div class="processing-progress"><div class="progress-copy"><small class="processing-message">Đang chờ cập nhật…</small><b class="processing-percent">0%</b></div><div class="progress-track"><i></i></div></div> }</td><td><div class="row-actions">@if (d.Status == DocumentStatus.Completed) { <a class="icon-btn" asp-page="/Lecturer/Chunks" asp-route-documentId="@d.Id" title="Xem các đoạn chunk">✂️</a> }<form method="post" asp-page-handler="Delete" onsubmit="return confirm('Xóa hoàn toàn tài liệu và tri thức của file?')"><input type="hidden" name="documentId" value="@d.Id"/><input type="hidden" name="courseId" value="@Model.CourseId"/><button class="icon-btn" title="Xóa">🗑</button></form></div></td></tr> }
-@if (!Model.Documents.Any()) { <tr><td colspan="5"><div class="empty-state compact"><span>📭</span><h3>Chưa có tài liệu</h3><p>Upload tệp đầu tiên để khởi tạo kho tri thức.</p></div></td></tr> }
+@foreach (var d in Model.Documents) { var cls = d.Status.ToString().ToLowerInvariant(); var statusLabel = d.Status switch { DocumentStatus.Completed => "Thành công", DocumentStatus.Failed => "Bị từ chối", _ => "Đang xử lý" }; <tr data-document-id="@d.Id" data-file-name="@d.FileName"><td><div class="file-cell"><span>📄</span><div><b>@d.FileName</b>@if (d.FailureReason is not null) { <small class="rejection-reason" title="@d.FailureReason"><strong>Lý do từ chối:</strong> @d.FailureReason</small> }</div></div></td><td>@d.CourseName</td><td>@d.UploadedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td><td><span class="status @cls">@statusLabel</span>@if (d.Status == DocumentStatus.Processing) { <div class="processing-progress"><div class="progress-copy"><small class="processing-message">Đang chờ cập nhật…</small><b class="processing-percent">0%</b></div><div class="progress-track"><i></i></div></div> }</td><td><div class="row-actions">@if (d.Status == DocumentStatus.Completed) { <a class="icon-btn" asp-page-handler="File" asp-route-documentId="@d.Id" asp-route-courseId="@d.CourseId" title="Tải tài liệu">⇩</a> @if (Model.CanManageCourse) { <a class="icon-btn" asp-page="/Lecturer/Chunks" asp-route-documentId="@d.Id" title="Xem các đoạn chunk">✂️</a> } } @if (Model.CanManageCourse) { <form method="post" asp-page-handler="Delete" onsubmit="return confirm('Xóa hoàn toàn tài liệu và tri thức của file?')"><input type="hidden" name="documentId" value="@d.Id"/><input type="hidden" name="courseId" value="@Model.CourseId"/><button class="icon-btn" title="Xóa">🗑</button></form> }</div></td></tr> }
+@if (!Model.Documents.Any()) { <tr><td colspan="5"><div class="empty-state compact"><span>📭</span><h3>Chưa có tài liệu</h3><p>@(Model.CourseId.HasValue ? "Môn học chưa có tài liệu hoàn thành." : "Bạn chưa được cấp quyền môn học nào.")</p></div></td></tr> }
 </tbody></table></div></section></div>
 @section Scripts { <script>
 const uploadForm = document.getElementById('uploadForm');
@@ -49,19 +55,47 @@ uploadForm?.addEventListener('submit', event => {
     request.send(new FormData(uploadForm));
 });
 
+const notification = document.getElementById('documentNotification');
+function showDocumentNotification(type, message) {
+    if (!notification) return;
+    notification.className = `alert alert-${type}`;
+    notification.textContent = message;
+    notification.hidden = false;
+    notification.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+const storedNotification = sessionStorage.getItem('document-processing-notification');
+if (storedNotification) {
+    sessionStorage.removeItem('document-processing-notification');
+    try {
+        const data = JSON.parse(storedNotification);
+        showDocumentNotification(data.type, data.message);
+    } catch { /* Bỏ qua dữ liệu cũ không hợp lệ. */ }
+}
+
 function updateProcessing(data) {
     const row = document.querySelector(`[data-document-id="${data.documentId}"]`);
     if (!row) return;
     const status = row.querySelector('.status');
     status.className = `status ${data.status.toLowerCase()}`;
-    status.textContent = data.status;
+    status.textContent = data.status === 'Completed' ? 'Thành công' : data.status === 'Failed' ? 'Bị từ chối' : 'Đang xử lý';
     const progress = row.querySelector('.processing-progress');
     if (progress) {
         progress.querySelector('.processing-percent').textContent = `${data.progress}%`;
         progress.querySelector('.processing-message').textContent = data.message || 'Đang xử lý…';
         progress.querySelector('.progress-track i').style.width = `${data.progress}%`;
     }
-    if (data.status !== 'Processing') setTimeout(() => location.reload(), 700);
+    if (data.status !== 'Processing') {
+        const fileName = row.dataset.fileName || 'Tài liệu';
+        const completed = data.status === 'Completed';
+        const message = completed
+            ? `Upload tài liệu “${fileName}” thành công.`
+            : `Tài liệu “${fileName}” bị từ chối. Lý do: ${data.message || 'Không thể xử lý nội dung tệp.'}`;
+        const type = completed ? 'success' : 'danger';
+        showDocumentNotification(type, message);
+        sessionStorage.setItem('document-processing-notification', JSON.stringify({ type, message }));
+        setTimeout(() => location.reload(), 1600);
+    }
 }
 
 async function connectDocumentHub() {

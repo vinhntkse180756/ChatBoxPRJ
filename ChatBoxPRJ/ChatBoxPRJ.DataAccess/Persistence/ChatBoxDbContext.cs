@@ -20,7 +20,10 @@ public sealed class ChatBoxDbContext(DbContextOptions<ChatBoxDbContext> options)
         model.Entity<Course>().HasIndex(x => x.Code).IsUnique();
         model.Entity<LearningDocument>().HasIndex(x => new { x.CourseId, x.Sha256 }).IsUnique();
         model.Entity<LecturerCourse>().HasKey(x => new { x.LecturerId, x.CourseId });
-        model.Entity<LecturerCourse>().HasIndex(x => x.CourseId).IsUnique();
+        model.Entity<LecturerCourse>().HasIndex(x => x.CourseId);
+        model.Entity<LecturerCourse>().HasIndex(x => new { x.CourseId, x.AccessLevel })
+            .IsUnique()
+            .HasFilter("[AccessLevel] = 1");
         model.Entity<ChatSession>().HasIndex(x => new { x.StudentId, x.CourseId }).IsUnique();
         model.Entity<LecturerCourse>().HasOne(x => x.Lecturer).WithMany(x => x.LecturerCourses).HasForeignKey(x => x.LecturerId).OnDelete(DeleteBehavior.Cascade);
         model.Entity<LecturerCourse>().HasOne(x => x.Course).WithMany(x => x.LecturerCourses).HasForeignKey(x => x.CourseId).OnDelete(DeleteBehavior.Cascade);

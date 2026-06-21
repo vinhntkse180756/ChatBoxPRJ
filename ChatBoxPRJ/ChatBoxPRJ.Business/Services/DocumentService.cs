@@ -139,10 +139,12 @@ public sealed class DocumentService(
         return (true, "Đã xóa tài liệu và toàn bộ tri thức liên quan.");
     }
 
-    public async Task<(string Path, string FileName, string ContentType)?> GetStudentFileAsync(Guid documentId, Guid courseId, CancellationToken ct = default)
+    public async Task<(string Path, string FileName, string ContentType)?> GetFileAsync(Guid documentId, Guid courseId, Guid actorId, UserRole role, CancellationToken ct = default)
     {
         var document = await documents.FindAsync(documentId, ct);
-        if (document is null || document.CourseId != courseId || document.Status != DocumentStatus.Completed || !File.Exists(document.StoragePath)) return null;
+        if (document is null || document.CourseId != courseId || document.Status != DocumentStatus.Completed
+            || !await courseService.CanAccessAsync(actorId, role, courseId, ct)
+            || !File.Exists(document.StoragePath)) return null;
         var type = Path.GetExtension(document.OriginalFileName).ToLowerInvariant() switch
         { ".pdf" => "application/pdf", ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".txt" => "text/plain; charset=utf-8", _ => "application/octet-stream" };
         return (document.StoragePath, document.OriginalFileName, type);

@@ -27,7 +27,7 @@ builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AuthorizeFolder("/Admin", "AdminOnly");
     options.Conventions.AuthorizeFolder("/Lecturer", "LecturersOnly");
-    options.Conventions.AuthorizeFolder("/Student", "StudentsOnly");
+    options.Conventions.AuthorizeFolder("/Student", "ChatUsers");
 });
 builder.Services.AddSignalR();
 builder.Services.AddAutoMapper(_ => { }, typeof(MappingProfile).Assembly);
@@ -42,6 +42,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
     options.AddPolicy("LecturersOnly", p => p.RequireRole("Lecturer"));
     options.AddPolicy("StudentsOnly", p => p.RequireRole("Student"));
+    options.AddPolicy("ChatUsers", p => p.RequireRole("Student", "Lecturer"));
 });
 builder.Services.AddDbContext<ChatBoxDbContext>(options =>
     options.UseSqlServer(

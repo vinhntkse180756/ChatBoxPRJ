@@ -51,7 +51,40 @@ public sealed class AccountService(IUserRepository users, IPasswordHasher hasher
     {
         var user = await users.FindByIdAsync(id, ct);
         if (user is null || user.Role != UserRole.Lecturer) return (false, "Không tìm thấy giảng viên.");
-        var paths = await users.DeleteLecturerAsync(id, ct); foreach (var path in paths) if (File.Exists(path)) File.Delete(path);
-        return (true, "Đã xóa giảng viên, phân công và tài liệu do người này tải lên.");
+        var paths = (await users.DeleteLecturerAsync(id, ct)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var failedPaths = new List<string>();
+        foreach (var path in paths)
+        {
+            if (!await TryDeleteFileAsync(path, ct)) failedPaths.Add(path);
+        }
+
+        if (failedPaths.Count > 0)
+            return (false, $"Đã xóa tài khoản và dữ liệu, nhưng không thể xóa {failedPaths.Count}/{paths.Count} file vật lý. Vui lòng kiểm tra quyền truy cập thư mục upload.");
+        return (true, $"Đã xóa giảng viên, phân công và toàn bộ {paths.Count} file do người này tải lên.");
+    }
+
+    private static async Task<bool> TryDeleteFileAsync(string path, CancellationToken ct)
+    {
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                if (File.Exists(path)) File.Delete(path);
+                return !File.Exists(path);
+            }
+            catch (IOException) when (attempt < 2)
+            {
+                await Task.Delay(150, ct);
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+        return false;
     }
 }
