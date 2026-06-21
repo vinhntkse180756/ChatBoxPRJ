@@ -5,6 +5,7 @@ using ChatBoxPRJ.Business.DTOs;
 using ChatBoxPRJ.Business.Interfaces;
 using ChatBoxPRJ.DataAccess.Interfaces;
 using ChatBoxPRJ.DataAccess.Models;
+using BusinessMessageRole = ChatBoxPRJ.Business.DTOs.MessageRole;
 
 namespace ChatBoxPRJ.Infrastructure;
 
@@ -44,12 +45,12 @@ public sealed class GeminiEmbeddingService(IConfiguration config) : IEmbeddingSe
 public sealed class GeminiAnswerGenerator(IConfiguration config) : IAnswerGenerator
 {
     private readonly HttpClient _http = new();
-    public async Task<string> GenerateAsync(string question, IReadOnlyList<RetrievedChunk> context, IReadOnlyList<ChatMessage> history, CancellationToken ct = default)
+    public async Task<string> GenerateAsync(string question, IReadOnlyList<RetrievedChunkContext> context, IReadOnlyList<ChatMessageContext> history, CancellationToken ct = default)
     {
         var key = config["AI:GeminiApiKey"] ?? throw new InvalidOperationException("Thiếu AI:GeminiApiKey.");
         var model = config["AI:ChatModel"] ?? "gemini-2.5-flash";
         var contextText = string.Join("\n\n", context.Select(x => $"[Nguồn: {x.FileName}, trang {x.PageNumber}, đoạn {x.ChunkNumber}]\n{x.Content}"));
-        var historyText = string.Join("\n", history.TakeLast(12).Select(x => $"{(x.Role == MessageRole.User ? "Sinh viên" : "Trợ lý")}: {x.Content}"));
+        var historyText = string.Join("\n", history.TakeLast(12).Select(x => $"{(x.Role == BusinessMessageRole.User ? "Sinh viên" : "Trợ lý")}: {x.Content}"));
         var prompt = $"LỊCH SỬ:\n{historyText}\n\nNGỮ CẢNH TÀI LIỆU:\n{contextText}\n\nCÂU HỎI:\n{question}";
         var payload = new
         {

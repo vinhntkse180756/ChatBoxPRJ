@@ -1,6 +1,9 @@
-using ChatBoxPRJ.DataAccess.Models;
-
 namespace ChatBoxPRJ.Business.DTOs;
+
+public enum UserRole { Student, Lecturer, Admin }
+public enum DocumentStatus { Processing, Completed, Failed }
+public enum MessageRole { User, Assistant }
+public enum LecturerAccessLevel { Lecturer, CourseHead }
 
 public sealed record UserDto(Guid Id, string Code, string FullName, string Email, UserRole Role);
 public sealed record CourseDto(Guid Id, string Code, string Name, int Credits, string Description);
@@ -14,3 +17,5 @@ public sealed record ChatWorkspaceDto(CourseDto Course, Guid SessionId, IReadOnl
 public sealed record UploadRequest(Guid CourseId, Guid UploadedById, string FileName, string ContentType, Stream Content, bool Overwrite);
 public sealed record UploadResult(bool Success, string Message, Guid? DocumentId = null);
 public sealed record ChatAnswer(string Answer, IReadOnlyList<CitationDto> Citations, bool Rejected = false, Guid? ConversationId = null);
+public sealed record RetrievedChunkContext(Guid ChunkId, Guid DocumentId, string FileName, int PageNumber, int ChunkNumber, string Content, double Score);
+public sealed record ChatMessageContext(MessageRole Role, string Content);

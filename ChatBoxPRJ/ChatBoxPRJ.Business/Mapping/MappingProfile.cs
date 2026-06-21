@@ -9,6 +9,10 @@ public sealed class MappingProfile : Profile
     public MappingProfile()
     {
         CreateMap<AppUser, UserDto>();
+        CreateMap<DataAccess.Models.UserRole, DTOs.UserRole>();
+        CreateMap<DataAccess.Models.DocumentStatus, DTOs.DocumentStatus>();
+        CreateMap<DataAccess.Models.MessageRole, DTOs.MessageRole>();
+        CreateMap<DataAccess.Models.LecturerAccessLevel, DTOs.LecturerAccessLevel>();
         CreateMap<Course, CourseDto>();
         CreateMap<LearningDocument, DocumentDto>()
             .ForCtorParam(nameof(DocumentDto.CourseName), option => option.MapFrom(source => source.Course.Name))

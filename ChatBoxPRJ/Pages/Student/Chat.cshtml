@@ -1,5 +1,5 @@
 @page
-@using ChatBoxPRJ.DataAccess.Models
+@using ChatBoxPRJ.Business.DTOs
 @model ChatBoxPRJ.Pages.Student.ChatModel
 @{ ViewData["Title"] = "Hỏi đáp học tập"; ViewData["FullWidth"] = true; var userAvatar = User.IsInRole("Lecturer") ? "GV" : "SV"; }
 <div class="chat-app">

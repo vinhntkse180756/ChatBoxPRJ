@@ -1,5 +1,4 @@
 using ChatBoxPRJ.Business.DTOs;
-using ChatBoxPRJ.DataAccess.Models;
 
 namespace ChatBoxPRJ.Business.Interfaces;
 
@@ -22,7 +21,7 @@ public interface IDocumentStatusNotifier
 
 public interface IAnswerGenerator
 {
-    Task<string> GenerateAsync(string question, IReadOnlyList<RetrievedChunk> context, IReadOnlyList<ChatMessage> history, CancellationToken ct = default);
+    Task<string> GenerateAsync(string question, IReadOnlyList<RetrievedChunkContext> context, IReadOnlyList<ChatMessageContext> history, CancellationToken ct = default);
 }
 
 public interface IPasswordHasher

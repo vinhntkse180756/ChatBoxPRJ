@@ -1,6 +1,6 @@
 using System.Threading.Channels;
 using ChatBoxPRJ.Business.Interfaces;
-using ChatBoxPRJ.DataAccess.Models;
+using ChatBoxPRJ.Business.DTOs;
 using ChatBoxPRJ.Pages.SignalR;
 using Microsoft.AspNetCore.SignalR;
 

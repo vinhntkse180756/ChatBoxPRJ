@@ -9,6 +9,9 @@ using ChatBoxPRJ.Business.Interfaces;
 using ChatBoxPRJ.Business.Options;
 using ChatBoxPRJ.DataAccess.Interfaces;
 using ChatBoxPRJ.DataAccess.Models;
+using BusinessDocumentStatus = ChatBoxPRJ.Business.DTOs.DocumentStatus;
+using BusinessUserRole = ChatBoxPRJ.Business.DTOs.UserRole;
+using DataDocumentStatus = ChatBoxPRJ.DataAccess.Models.DocumentStatus;
 
 namespace ChatBoxPRJ.Business.Services;
 
@@ -54,14 +57,14 @@ public sealed class DocumentService(
         var document = new LearningDocument
         {
             CourseId = request.CourseId, UploadedById = request.UploadedById, OriginalFileName = safeName,
-            Sha256 = hash, Status = DocumentStatus.Processing,
+            Sha256 = hash, Status = DataDocumentStatus.Processing,
             StoragePath = Path.Combine(folder, $"{Guid.NewGuid():N}_{safeName}")
         };
         memory.Position = 0;
         await using (var target = File.Create(document.StoragePath)) await memory.CopyToAsync(target, ct);
         await documents.AddAsync(document, ct);
         await queue.EnqueueAsync(document.Id, ct);
-        await notifier.NotifyAsync(document.Id, DocumentStatus.Processing, 5, "Đã upload, đang chờ xử lý…", ct);
+        await notifier.NotifyAsync(document.Id, BusinessDocumentStatus.Processing, 5, "Đã upload, đang chờ xử lý…", ct);
         return new(true, "Tệp đã vào hàng đợi xử lý.", document.Id);
     }
 
@@ -71,10 +74,10 @@ public sealed class DocumentService(
         if (document is null) return;
         try
         {
-            await notifier.NotifyAsync(document.Id, DocumentStatus.Processing, 10, "Đang trích xuất nội dung…", ct);
+            await notifier.NotifyAsync(document.Id, BusinessDocumentStatus.Processing, 10, "Đang trích xuất nội dung…", ct);
             var pages = await ExtractPagesAsync(document.StoragePath, ct);
             if (pages.Sum(x => x.Text.Length) < 20) throw new InvalidOperationException("Không trích xuất được chữ. PDF có thể là bản scan ảnh.");
-            await notifier.NotifyAsync(document.Id, DocumentStatus.Processing, 25, "Đã trích xuất, đang chia đoạn…", ct);
+            await notifier.NotifyAsync(document.Id, BusinessDocumentStatus.Processing, 25, "Đã trích xuất, đang chia đoạn…", ct);
             var chunks = new List<DocumentChunk>();
             var chunkNo = 1;
             var pendingChunks = pages
@@ -91,43 +94,43 @@ public sealed class DocumentService(
                     ChunkNumber = chunkNo++, Content = pending.Text, VectorJson = System.Text.Json.JsonSerializer.Serialize(vector)
                 });
                 var progress = 30 + (int)Math.Round((index + 1d) / Math.Max(1, pendingChunks.Count) * 50d);
-                await notifier.NotifyAsync(document.Id, DocumentStatus.Processing, progress,
+                await notifier.NotifyAsync(document.Id, BusinessDocumentStatus.Processing, progress,
                     $"Đang tạo vector {index + 1}/{pendingChunks.Count} đoạn…", ct);
                 }
             // Luôn giữ một bản chunk trong SQL để giảng viên có thể kiểm tra nội dung,
             // kể cả khi vector chính được lưu ở Qdrant.
-            await notifier.NotifyAsync(document.Id, DocumentStatus.Processing, 85, "Đang lưu các đoạn tài liệu…", ct);
+            await notifier.NotifyAsync(document.Id, BusinessDocumentStatus.Processing, 85, "Đang lưu các đoạn tài liệu…", ct);
             await documents.ReplaceChunksAsync(document.Id, chunks, ct);
-            await notifier.NotifyAsync(document.Id, DocumentStatus.Processing, 92, "Đang lập chỉ mục tìm kiếm…", ct);
+            await notifier.NotifyAsync(document.Id, BusinessDocumentStatus.Processing, 92, "Đang lập chỉ mục tìm kiếm…", ct);
             await vectorStore.UpsertAsync(document, chunks, ct);
-            document.Status = DocumentStatus.Completed;
+            document.Status = DataDocumentStatus.Completed;
             document.FailureReason = null;
             await documents.UpdateAsync(document, ct);
-            await notifier.NotifyAsync(document.Id, document.Status, 100, "Lập chỉ mục hoàn tất.", ct);
+            await notifier.NotifyAsync(document.Id, (BusinessDocumentStatus)document.Status, 100, "Lập chỉ mục hoàn tất.", ct);
         }
         catch (Exception ex)
         {
-            document.Status = DocumentStatus.Failed;
+            document.Status = DataDocumentStatus.Failed;
             document.FailureReason = ex.Message.Length > 900 ? ex.Message[..900] : ex.Message;
             await documents.UpdateAsync(document, ct);
-            await notifier.NotifyAsync(document.Id, document.Status, 100, document.FailureReason, ct);
+            await notifier.NotifyAsync(document.Id, (BusinessDocumentStatus)document.Status, 100, document.FailureReason, ct);
         }
     }
 
     public async Task<IReadOnlyList<DocumentDto>> ListAsync(Guid? courseId, bool completedOnly, CancellationToken ct = default)
         => mapper.Map<IReadOnlyList<DocumentDto>>(await documents.ListAsync(courseId, completedOnly, ct));
 
-    public async Task<DocumentChunksDto?> GetChunksAsync(Guid documentId, Guid actorId, UserRole role, CancellationToken ct = default)
+    public async Task<DocumentChunksDto?> GetChunksAsync(Guid documentId, Guid actorId, BusinessUserRole role, CancellationToken ct = default)
     {
         var document = await documents.FindAsync(documentId, ct);
         if (document is null || !await courseService.CanManageAsync(actorId, role, document.CourseId, ct)) return null;
         var chunks = document.Chunks.OrderBy(x => x.ChunkNumber).Select(x => new DocumentChunkDto(
             x.Id, x.PageNumber, x.ChunkNumber,
             Regex.Split(x.Content.Trim(), @"\s+").Count(word => word.Length > 0), x.Content)).ToList();
-        return new DocumentChunksDto(document.Id, document.OriginalFileName, document.Course.Name, document.Status, chunks);
+        return new DocumentChunksDto(document.Id, document.OriginalFileName, document.Course.Name, (BusinessDocumentStatus)document.Status, chunks);
     }
 
-    public async Task<(bool Success, string Message)> DeleteAsync(Guid documentId, Guid actorId, UserRole role, CancellationToken ct = default)
+    public async Task<(bool Success, string Message)> DeleteAsync(Guid documentId, Guid actorId, BusinessUserRole role, CancellationToken ct = default)
     {
         var document = await documents.FindAsync(documentId, ct);
         if (document is null) return (false, "Không tìm thấy tài liệu.");
@@ -139,10 +142,10 @@ public sealed class DocumentService(
         return (true, "Đã xóa tài liệu và toàn bộ tri thức liên quan.");
     }
 
-    public async Task<(string Path, string FileName, string ContentType)?> GetFileAsync(Guid documentId, Guid courseId, Guid actorId, UserRole role, CancellationToken ct = default)
+    public async Task<(string Path, string FileName, string ContentType)?> GetFileAsync(Guid documentId, Guid courseId, Guid actorId, BusinessUserRole role, CancellationToken ct = default)
     {
         var document = await documents.FindAsync(documentId, ct);
-        if (document is null || document.CourseId != courseId || document.Status != DocumentStatus.Completed
+        if (document is null || document.CourseId != courseId || document.Status != DataDocumentStatus.Completed
             || !await courseService.CanAccessAsync(actorId, role, courseId, ct)
             || !File.Exists(document.StoragePath)) return null;
         var type = Path.GetExtension(document.OriginalFileName).ToLowerInvariant() switch

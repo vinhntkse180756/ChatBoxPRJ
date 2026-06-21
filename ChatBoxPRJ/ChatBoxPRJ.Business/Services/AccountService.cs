@@ -3,18 +3,19 @@ using ChatBoxPRJ.Business.DTOs;
 using ChatBoxPRJ.Business.Interfaces;
 using ChatBoxPRJ.DataAccess.Interfaces;
 using ChatBoxPRJ.DataAccess.Models;
+using DataUserRole = ChatBoxPRJ.DataAccess.Models.UserRole;
 
 namespace ChatBoxPRJ.Business.Services;
 
 public sealed class AccountService(IUserRepository users, IPasswordHasher hasher, IMapper mapper) : IAccountService
 {
     public Task<(bool Success, string Message)> RegisterStudentAsync(string code, string fullName, string email, string password, CancellationToken ct = default)
-        => CreateAsync(code, fullName, email, password, UserRole.Student, ct);
+        => CreateAsync(code, fullName, email, password, DataUserRole.Student, ct);
 
     public Task<(bool Success, string Message)> CreateLecturerAsync(string code, string fullName, string email, string password, CancellationToken ct = default)
-        => CreateAsync(code, fullName, email, password, UserRole.Lecturer, ct);
+        => CreateAsync(code, fullName, email, password, DataUserRole.Lecturer, ct);
 
-    private async Task<(bool, string)> CreateAsync(string code, string fullName, string email, string password, UserRole role, CancellationToken ct)
+    private async Task<(bool, string)> CreateAsync(string code, string fullName, string email, string password, DataUserRole role, CancellationToken ct)
     {
         code = code.Trim().ToUpperInvariant();
         email = email.Trim().ToLowerInvariant();
@@ -23,7 +24,7 @@ public sealed class AccountService(IUserRepository users, IPasswordHasher hasher
         if (await users.CodeOrEmailExistsAsync(code, email, ct))
             return (false, "Mã định danh hoặc email đã tồn tại.");
         await users.AddAsync(new AppUser { Code = code, FullName = fullName.Trim(), Email = email, PasswordHash = hasher.Hash(password), Role = role }, ct);
-        return (true, role == UserRole.Student ? "Đăng ký thành công." : "Đã cấp tài khoản giảng viên.");
+        return (true, role == DataUserRole.Student ? "Đăng ký thành công." : "Đã cấp tài khoản giảng viên.");
     }
 
     public async Task<UserDto?> AuthenticateAsync(string login, string password, CancellationToken ct = default)
@@ -39,7 +40,7 @@ public sealed class AccountService(IUserRepository users, IPasswordHasher hasher
     public async Task<(bool Success, string Message)> UpdateLecturerAsync(Guid id, string code, string fullName, string email, string? password, CancellationToken ct = default)
     {
         var user = await users.FindByIdAsync(id, ct); code = code.Trim().ToUpperInvariant(); email = email.Trim().ToLowerInvariant();
-        if (user is null || user.Role != UserRole.Lecturer) return (false, "Không tìm thấy giảng viên.");
+        if (user is null || user.Role != DataUserRole.Lecturer) return (false, "Không tìm thấy giảng viên.");
         if ((await users.ListLecturersAsync(ct)).Any(x => x.Id != id && (x.Code == code || x.Email == email))) return (false, "Mã giảng viên hoặc email đã tồn tại.");
         if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(email)) return (false, "Thông tin không hợp lệ.");
         user.Code = code; user.FullName = fullName.Trim(); user.Email = email;
@@ -50,7 +51,7 @@ public sealed class AccountService(IUserRepository users, IPasswordHasher hasher
     public async Task<(bool Success, string Message)> DeleteLecturerAsync(Guid id, CancellationToken ct = default)
     {
         var user = await users.FindByIdAsync(id, ct);
-        if (user is null || user.Role != UserRole.Lecturer) return (false, "Không tìm thấy giảng viên.");
+        if (user is null || user.Role != DataUserRole.Lecturer) return (false, "Không tìm thấy giảng viên.");
         var paths = (await users.DeleteLecturerAsync(id, ct)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         var failedPaths = new List<string>();
         foreach (var path in paths)

@@ -3,6 +3,9 @@ using ChatBoxPRJ.Business.DTOs;
 using ChatBoxPRJ.Business.Interfaces;
 using ChatBoxPRJ.DataAccess.Interfaces;
 using ChatBoxPRJ.DataAccess.Models;
+using BusinessAccessLevel = ChatBoxPRJ.Business.DTOs.LecturerAccessLevel;
+using BusinessUserRole = ChatBoxPRJ.Business.DTOs.UserRole;
+using DataAccessLevel = ChatBoxPRJ.DataAccess.Models.LecturerAccessLevel;
 
 namespace ChatBoxPRJ.Business.Services;
 
@@ -33,24 +36,29 @@ public sealed class CourseService(ICourseRepository courses, IMapper mapper) : I
     }
     public async Task<IReadOnlyList<CourseDto>> ListAsync(CancellationToken ct = default) => mapper.Map<IReadOnlyList<CourseDto>>(await courses.ListAsync(ct));
     public async Task<IReadOnlyList<CourseDto>> ListForLecturerAsync(Guid lecturerId, CancellationToken ct = default) => mapper.Map<IReadOnlyList<CourseDto>>(await courses.ListForLecturerAsync(lecturerId, ct));
-    public Task<IReadOnlyDictionary<Guid, LecturerAccessLevel>> GetAssignmentsAsync(Guid lecturerId, CancellationToken ct = default)
-        => courses.GetLecturerAssignmentsAsync(lecturerId, ct);
-    public async Task<(bool Success, string Message)> SaveAssignmentsAsync(Guid lecturerId, IReadOnlyDictionary<Guid, LecturerAccessLevel> assignments, CancellationToken ct = default)
+    public async Task<IReadOnlyDictionary<Guid, BusinessAccessLevel>> GetAssignmentsAsync(Guid lecturerId, CancellationToken ct = default)
+        => (await courses.GetLecturerAssignmentsAsync(lecturerId, ct))
+            .ToDictionary(x => x.Key, x => (BusinessAccessLevel)x.Value);
+    public async Task<(bool Success, string Message)> SaveAssignmentsAsync(Guid lecturerId, IReadOnlyDictionary<Guid, BusinessAccessLevel> assignments, CancellationToken ct = default)
     {
         if (assignments.Values.Any(x => !Enum.IsDefined(x))) return (false, "Cấp quyền môn học không hợp lệ.");
-        try { await courses.ReplaceLecturerCoursesAsync(lecturerId, assignments, ct); }
+        var dataAssignments = assignments.ToDictionary(x => x.Key, x => (DataAccessLevel)x.Value);
+        try { await courses.ReplaceLecturerCoursesAsync(lecturerId, dataAssignments, ct); }
         catch (InvalidOperationException ex) { return (false, ex.Message); }
         return (true, "Đã lưu phân quyền môn học cho giảng viên.");
     }
 
-    public Task<LecturerAccessLevel?> GetLecturerAccessLevelAsync(Guid lecturerId, Guid courseId, CancellationToken ct = default)
-        => courses.GetLecturerAccessLevelAsync(lecturerId, courseId, ct);
+    public async Task<BusinessAccessLevel?> GetLecturerAccessLevelAsync(Guid lecturerId, Guid courseId, CancellationToken ct = default)
+    {
+        var access = await courses.GetLecturerAccessLevelAsync(lecturerId, courseId, ct);
+        return access.HasValue ? (BusinessAccessLevel)access.Value : null;
+    }
 
-    public async Task<bool> CanAccessAsync(Guid userId, UserRole role, Guid courseId, CancellationToken ct = default)
-        => role == UserRole.Student
-            || role == UserRole.Lecturer && await courses.GetLecturerAccessLevelAsync(userId, courseId, ct) is not null;
+    public async Task<bool> CanAccessAsync(Guid userId, BusinessUserRole role, Guid courseId, CancellationToken ct = default)
+        => role == BusinessUserRole.Student
+            || role == BusinessUserRole.Lecturer && await courses.GetLecturerAccessLevelAsync(userId, courseId, ct) is not null;
 
-    public async Task<bool> CanManageAsync(Guid userId, UserRole role, Guid courseId, CancellationToken ct = default)
-        => role == UserRole.Lecturer
-            && await courses.GetLecturerAccessLevelAsync(userId, courseId, ct) == LecturerAccessLevel.CourseHead;
+    public async Task<bool> CanManageAsync(Guid userId, BusinessUserRole role, Guid courseId, CancellationToken ct = default)
+        => role == BusinessUserRole.Lecturer
+            && await courses.GetLecturerAccessLevelAsync(userId, courseId, ct) == DataAccessLevel.CourseHead;
 }

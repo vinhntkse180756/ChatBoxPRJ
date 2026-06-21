@@ -5,6 +5,10 @@ using ChatBoxPRJ.Business.Interfaces;
 using ChatBoxPRJ.Business.Options;
 using ChatBoxPRJ.DataAccess.Interfaces;
 using ChatBoxPRJ.DataAccess.Models;
+using BusinessMessageRole = ChatBoxPRJ.Business.DTOs.MessageRole;
+using BusinessUserRole = ChatBoxPRJ.Business.DTOs.UserRole;
+using DataDocumentStatus = ChatBoxPRJ.DataAccess.Models.DocumentStatus;
+using DataMessageRole = ChatBoxPRJ.DataAccess.Models.MessageRole;
 
 namespace ChatBoxPRJ.Business.Services;
 
@@ -18,7 +22,7 @@ public sealed class ChatService(
     RagOptions options,
     IMapper mapper) : IChatService
 {
-    public async Task<ChatWorkspaceDto?> OpenWorkspaceAsync(Guid userId, UserRole role, Guid courseId, Guid? conversationId = null, CancellationToken ct = default)
+    public async Task<ChatWorkspaceDto?> OpenWorkspaceAsync(Guid userId, BusinessUserRole role, Guid courseId, Guid? conversationId = null, CancellationToken ct = default)
     {
         var course = await courses.FindAsync(courseId, ct);
         if (course is null || !await CanAccessCourseAsync(userId, role, courseId, ct)) return null;
@@ -40,33 +44,36 @@ public sealed class ChatService(
         return new ChatWorkspaceDto(mapper.Map<CourseDto>(course), session.Id, docs, histories, messages);
     }
 
-    public async Task<ChatAnswer> AskAsync(Guid userId, UserRole role, Guid courseId, Guid? conversationId, Guid documentId, string question, CancellationToken ct = default)
+    public async Task<ChatAnswer> AskAsync(Guid userId, BusinessUserRole role, Guid courseId, Guid? conversationId, Guid documentId, string question, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(question)) return new("Vui lòng nhập câu hỏi.", [], true);
         if (!await CanAccessCourseAsync(userId, role, courseId, ct)) return new("Bạn chưa được cấp quyền truy cập môn học này.", [], true);
         var selectedDocument = await documents.FindAsync(documentId, ct);
-        if (selectedDocument is null || selectedDocument.CourseId != courseId || selectedDocument.Status != DocumentStatus.Completed)
+        if (selectedDocument is null || selectedDocument.CourseId != courseId || selectedDocument.Status != DataDocumentStatus.Completed)
             return new("Vui lòng chọn một tài liệu đã lập chỉ mục trước khi đặt câu hỏi.", [], true);
         var session = await chats.GetOrCreateSessionAsync(userId, courseId, ct);
         var activeConversationId = conversationId ?? Guid.NewGuid();
         var history = await chats.GetMessagesAsync(session.Id, activeConversationId, ct);
         if (history.Any(x => x.DocumentId != documentId))
             return new("Cuộc trò chuyện này thuộc một tài liệu khác. Hãy tạo đoạn chat mới.", [], true, activeConversationId);
-        await chats.AddMessageAsync(new ChatMessage { SessionId = session.Id, ConversationId = activeConversationId, DocumentId = documentId, Role = MessageRole.User, Content = question.Trim() }, ct);
+        await chats.AddMessageAsync(new ChatMessage { SessionId = session.Id, ConversationId = activeConversationId, DocumentId = documentId, Role = DataMessageRole.User, Content = question.Trim() }, ct);
         var query = await embeddings.EmbedAsync(question, EmbeddingTask.Query, ct);
         var found = await vectors.SearchAsync(courseId, documentId, query, options.TopK, ct);
         if (found.Count == 0 || found.Max(x => x.Score) < options.SimilarityThreshold)
         {
             const string refusal = "Xin lỗi, câu hỏi của bạn không nằm trong phạm vi tài liệu học tập của môn học này.";
-            await chats.AddMessageAsync(new ChatMessage { SessionId = session.Id, ConversationId = activeConversationId, DocumentId = documentId, Role = MessageRole.Assistant, Content = refusal, CitationsJson = "[]" }, ct);
+            await chats.AddMessageAsync(new ChatMessage { SessionId = session.Id, ConversationId = activeConversationId, DocumentId = documentId, Role = DataMessageRole.Assistant, Content = refusal, CitationsJson = "[]" }, ct);
             return new(refusal, [], true, activeConversationId);
         }
-        var answer = await answers.GenerateAsync(question, found, history, ct);
+        var answerContext = found.Select(x => new RetrievedChunkContext(
+            x.ChunkId, x.DocumentId, x.FileName, x.PageNumber, x.ChunkNumber, x.Content, x.Score)).ToList();
+        var historyContext = history.Select(x => new ChatMessageContext((BusinessMessageRole)x.Role, x.Content)).ToList();
+        var answer = await answers.GenerateAsync(question, answerContext, historyContext, ct);
         var citations = found.Select(x => new CitationDto(x.DocumentId, x.FileName, x.PageNumber, x.ChunkNumber,
             x.Content.Length <= 320 ? x.Content : x.Content[..320] + "…")).ToList();
         await chats.AddMessageAsync(new ChatMessage
         {
-            SessionId = session.Id, ConversationId = activeConversationId, DocumentId = documentId, Role = MessageRole.Assistant, Content = answer,
+            SessionId = session.Id, ConversationId = activeConversationId, DocumentId = documentId, Role = DataMessageRole.Assistant, Content = answer,
             CitationsJson = JsonSerializer.Serialize(citations)
         }, ct);
         return new(answer, citations, ConversationId: activeConversationId);
@@ -74,7 +81,7 @@ public sealed class ChatService(
 
     public async Task<(bool Success, string Message)> DeleteHistoryAsync(
         Guid userId,
-        UserRole role,
+        BusinessUserRole role,
         Guid courseId,
         Guid? conversationId = null,
         CancellationToken ct = default)
@@ -89,15 +96,15 @@ public sealed class ChatService(
             : "Đã xóa toàn bộ lịch sử hội thoại của môn học.");
     }
 
-    private async Task<bool> CanAccessCourseAsync(Guid userId, UserRole role, Guid courseId, CancellationToken ct)
-        => role == UserRole.Student
-            || role == UserRole.Lecturer && await courses.GetLecturerAccessLevelAsync(userId, courseId, ct) is not null;
+    private async Task<bool> CanAccessCourseAsync(Guid userId, BusinessUserRole role, Guid courseId, CancellationToken ct)
+        => role == BusinessUserRole.Student
+            || role == BusinessUserRole.Lecturer && await courses.GetLecturerAccessLevelAsync(userId, courseId, ct) is not null;
 
     private static ChatMessageDto MapMessage(ChatMessage x)
     {
         IReadOnlyList<CitationDto> citations = [];
         if (!string.IsNullOrWhiteSpace(x.CitationsJson))
             citations = JsonSerializer.Deserialize<List<CitationDto>>(x.CitationsJson) ?? [];
-        return new(x.Id, x.Role, x.Content, citations, x.CreatedAtUtc);
+        return new(x.Id, (BusinessMessageRole)x.Role, x.Content, citations, x.CreatedAtUtc);
     }
 }
