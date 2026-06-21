@@ -1,9 +1,10 @@
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using ChatBoxPRJ.Business.Domain;
 using ChatBoxPRJ.Business.DTOs;
 using ChatBoxPRJ.Business.Interfaces;
+using ChatBoxPRJ.DataAccess.Interfaces;
+using ChatBoxPRJ.DataAccess.Models;
 
 namespace ChatBoxPRJ.Infrastructure;
 

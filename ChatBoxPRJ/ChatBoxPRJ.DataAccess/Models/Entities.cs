@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace ChatBoxPRJ.Business.Domain;
+namespace ChatBoxPRJ.DataAccess.Models;
 
 public enum UserRole { Student, Lecturer, Admin }
 public enum DocumentStatus { Processing, Completed, Failed }
@@ -87,3 +87,12 @@ public sealed class ChatMessage
     public string? CitationsJson { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
+
+public sealed record RetrievedChunk(
+    Guid ChunkId,
+    Guid DocumentId,
+    string FileName,
+    int PageNumber,
+    int ChunkNumber,
+    string Content,
+    double Score);

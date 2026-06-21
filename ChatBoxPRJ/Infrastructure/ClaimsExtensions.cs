@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using ChatBoxPRJ.Business.Domain;
+using ChatBoxPRJ.DataAccess.Models;
 
 namespace ChatBoxPRJ.Infrastructure;
 

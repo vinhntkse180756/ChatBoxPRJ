@@ -1,8 +1,10 @@
 using System.Text.Json;
-using ChatBoxPRJ.Business.Domain;
+using AutoMapper;
 using ChatBoxPRJ.Business.DTOs;
 using ChatBoxPRJ.Business.Interfaces;
 using ChatBoxPRJ.Business.Options;
+using ChatBoxPRJ.DataAccess.Interfaces;
+using ChatBoxPRJ.DataAccess.Models;
 
 namespace ChatBoxPRJ.Business.Services;
 
@@ -13,18 +15,19 @@ public sealed class ChatService(
     IEmbeddingService embeddings,
     IVectorStore vectors,
     IAnswerGenerator answers,
-    RagOptions options) : IChatService
+    RagOptions options,
+    IMapper mapper) : IChatService
 {
     public async Task<ChatWorkspaceDto?> OpenWorkspaceAsync(Guid studentId, Guid courseId, Guid? documentId = null, CancellationToken ct = default)
     {
         var course = await courses.FindAsync(courseId, ct);
         if (course is null) return null;
         var session = await chats.GetOrCreateSessionAsync(studentId, courseId, ct);
-        var docs = (await documents.ListAsync(courseId, true, ct)).Select(d => new DocumentDto(d.Id, d.CourseId, course.Name, d.OriginalFileName, d.Status, d.FailureReason, d.UploadedAtUtc)).ToList();
+        var docs = mapper.Map<IReadOnlyList<DocumentDto>>(await documents.ListAsync(courseId, true, ct));
         var messages = documentId.HasValue
             ? (await chats.GetMessagesAsync(session.Id, documentId, ct)).Select(MapMessage).ToList()
             : [];
-        return new ChatWorkspaceDto(new CourseDto(course.Id, course.Code, course.Name, course.Credits, course.Description), session.Id, docs, messages);
+        return new ChatWorkspaceDto(mapper.Map<CourseDto>(course), session.Id, docs, messages);
     }
 
     public async Task<ChatAnswer> AskAsync(Guid studentId, Guid courseId, Guid documentId, string question, CancellationToken ct = default)

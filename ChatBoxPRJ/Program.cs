@@ -1,10 +1,13 @@
 using ChatBoxPRJ.Business.Interfaces;
+using ChatBoxPRJ.Business.Mapping;
 using ChatBoxPRJ.Business.Options;
 using ChatBoxPRJ.Business.Services;
+using ChatBoxPRJ.DataAccess.Interfaces;
+using ChatBoxPRJ.DataAccess.Migrations;
 using ChatBoxPRJ.DataAccess.Persistence;
 using ChatBoxPRJ.DataAccess.Repositories;
-using ChatBoxPRJ.Hubs;
 using ChatBoxPRJ.Infrastructure;
+using ChatBoxPRJ.Pages.SignalR;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Features;
@@ -27,6 +30,7 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizeFolder("/Student", "StudentsOnly");
 });
 builder.Services.AddSignalR();
+builder.Services.AddAutoMapper(_ => { }, typeof(MappingProfile).Assembly);
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
 {
     options.LoginPath = "/Account/Login";
@@ -77,6 +81,7 @@ builder.Services.AddSingleton<IDocumentWorkQueue>(sp => sp.GetRequiredService<Do
 builder.Services.AddSingleton<IDocumentStatusNotifier, SignalRDocumentStatusNotifier>();
 builder.Services.AddHostedService<DocumentWorker>();
 builder.Services.AddScoped<DatabaseSeeder>();
+builder.Services.AddScoped<DatabaseMigrationManager>();
 
 var app = builder.Build();
 if (!app.Environment.IsDevelopment()) { app.UseExceptionHandler("/Error"); app.UseHsts(); }
@@ -90,23 +95,14 @@ app.MapHub<DocumentHub>("/hubs/documents");
 
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<ChatBoxDbContext>();
-    await db.Database.EnsureCreatedAsync();
-    await db.Database.ExecuteSqlRawAsync("""
-        IF COL_LENGTH('dbo.ChatMessages', 'DocumentId') IS NULL
-            ALTER TABLE [dbo].[ChatMessages] ADD [DocumentId] uniqueidentifier NULL;
-        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ChatMessages_SessionId_DocumentId_CreatedAtUtc' AND object_id = OBJECT_ID('dbo.ChatMessages'))
-            CREATE INDEX [IX_ChatMessages_SessionId_DocumentId_CreatedAtUtc]
-            ON [dbo].[ChatMessages] ([SessionId], [DocumentId], [CreatedAtUtc]);
-        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_LecturerCourses_CourseId' AND object_id = OBJECT_ID('dbo.LecturerCourses'))
-        BEGIN
-            ;WITH duplicates AS
-            (SELECT LecturerId, CourseId, ROW_NUMBER() OVER(PARTITION BY CourseId ORDER BY LecturerId) AS rn FROM dbo.LecturerCourses)
-            DELETE FROM duplicates WHERE rn > 1;
-            CREATE UNIQUE INDEX [UX_LecturerCourses_CourseId] ON [dbo].[LecturerCourses] ([CourseId]);
-        END
-        """);
-    await scope.ServiceProvider.GetRequiredService<DatabaseSeeder>().SeedAsync();
+    scope.ServiceProvider.GetRequiredService<AutoMapper.IMapper>()
+        .ConfigurationProvider.AssertConfigurationIsValid();
+    await scope.ServiceProvider.GetRequiredService<DatabaseMigrationManager>().MigrateAsync();
+    var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+    await scope.ServiceProvider.GetRequiredService<DatabaseSeeder>().SeedAsync(
+        builder.Configuration["SeedAdmin:Code"] ?? "admin",
+        builder.Configuration["SeedAdmin:Email"] ?? "admin@chatbox.local",
+        passwordHasher.Hash(builder.Configuration["SeedAdmin:Password"] ?? "Admin@123"));
 }
 
 app.Run();

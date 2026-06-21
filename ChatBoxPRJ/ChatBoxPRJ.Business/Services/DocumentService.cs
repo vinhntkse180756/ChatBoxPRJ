@@ -3,10 +3,12 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
-using ChatBoxPRJ.Business.Domain;
+using AutoMapper;
 using ChatBoxPRJ.Business.DTOs;
 using ChatBoxPRJ.Business.Interfaces;
 using ChatBoxPRJ.Business.Options;
+using ChatBoxPRJ.DataAccess.Interfaces;
+using ChatBoxPRJ.DataAccess.Models;
 
 namespace ChatBoxPRJ.Business.Services;
 
@@ -19,7 +21,8 @@ public sealed class DocumentService(
     IDocumentWorkQueue queue,
     IDocumentStatusNotifier notifier,
     StorageOptions storage,
-    RagOptions rag) : IDocumentService
+    RagOptions rag,
+    IMapper mapper) : IDocumentService
 {
     private const long MaxFileSize = 100L * 1024 * 1024;
     private static readonly HashSet<string> Allowed = new(StringComparer.OrdinalIgnoreCase) { ".pdf", ".docx", ".txt" };
@@ -112,8 +115,7 @@ public sealed class DocumentService(
     }
 
     public async Task<IReadOnlyList<DocumentDto>> ListAsync(Guid? courseId, bool completedOnly, CancellationToken ct = default)
-        => (await documents.ListAsync(courseId, completedOnly, ct)).Select(x => new DocumentDto(
-            x.Id, x.CourseId, x.Course.Name, x.OriginalFileName, x.Status, x.FailureReason, x.UploadedAtUtc)).ToList();
+        => mapper.Map<IReadOnlyList<DocumentDto>>(await documents.ListAsync(courseId, completedOnly, ct));
 
     public async Task<DocumentChunksDto?> GetChunksAsync(Guid documentId, Guid actorId, UserRole role, CancellationToken ct = default)
     {

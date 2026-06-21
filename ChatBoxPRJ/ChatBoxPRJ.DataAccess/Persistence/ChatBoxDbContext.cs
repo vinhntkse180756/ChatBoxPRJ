@@ -1,4 +1,4 @@
-using ChatBoxPRJ.Business.Domain;
+using ChatBoxPRJ.DataAccess.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChatBoxPRJ.DataAccess.Persistence;

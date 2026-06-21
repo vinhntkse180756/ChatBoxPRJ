@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
-using ChatBoxPRJ.Business.Domain;
+using ChatBoxPRJ.DataAccess.Models;
 using ChatBoxPRJ.Business.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;

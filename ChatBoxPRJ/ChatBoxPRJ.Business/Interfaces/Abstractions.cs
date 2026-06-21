@@ -1,63 +1,25 @@
-using ChatBoxPRJ.Business.Domain;
 using ChatBoxPRJ.Business.DTOs;
+using ChatBoxPRJ.DataAccess.Models;
 
 namespace ChatBoxPRJ.Business.Interfaces;
 
-public interface IUserRepository
-{
-    Task<AppUser?> FindByLoginAsync(string login, CancellationToken ct = default);
-    Task<AppUser?> FindByIdAsync(Guid id, CancellationToken ct = default);
-    Task<bool> CodeOrEmailExistsAsync(string code, string email, CancellationToken ct = default);
-    Task AddAsync(AppUser user, CancellationToken ct = default);
-    Task<IReadOnlyList<AppUser>> ListLecturersAsync(CancellationToken ct = default);
-    Task UpdateAsync(AppUser user, CancellationToken ct = default);
-    Task<IReadOnlyList<string>> DeleteLecturerAsync(Guid id, CancellationToken ct = default);
-}
-
-public interface ICourseRepository
-{
-    Task<IReadOnlyList<Course>> ListAsync(CancellationToken ct = default);
-    Task<IReadOnlyList<Course>> ListForLecturerAsync(Guid lecturerId, CancellationToken ct = default);
-    Task<Course?> FindAsync(Guid id, CancellationToken ct = default);
-    Task AddAsync(Course course, CancellationToken ct = default);
-    Task UpdateAsync(Course course, CancellationToken ct = default);
-    Task<IReadOnlyList<string>> DeleteAsync(Guid id, CancellationToken ct = default);
-    Task<bool> CodeExistsAsync(string code, CancellationToken ct = default);
-    Task<IReadOnlySet<Guid>> GetLecturerCourseIdsAsync(Guid lecturerId, CancellationToken ct = default);
-    Task ReplaceLecturerCoursesAsync(Guid lecturerId, IReadOnlySet<Guid> courseIds, CancellationToken ct = default);
-    Task<Guid?> GetCourseHeadAsync(Guid courseId, CancellationToken ct = default);
-}
-
-public interface IDocumentRepository
-{
-    Task<bool> HashExistsAsync(Guid courseId, string sha256, CancellationToken ct = default);
-    Task<LearningDocument?> FindAsync(Guid id, CancellationToken ct = default);
-    Task<LearningDocument?> FindByNameAsync(Guid courseId, string fileName, CancellationToken ct = default);
-    Task AddAsync(LearningDocument document, CancellationToken ct = default);
-    Task UpdateAsync(LearningDocument document, CancellationToken ct = default);
-    Task ReplaceChunksAsync(Guid documentId, IReadOnlyList<DocumentChunk> chunks, CancellationToken ct = default);
-    Task<IReadOnlyList<LearningDocument>> ListAsync(Guid? courseId, bool completedOnly, CancellationToken ct = default);
-    Task DeleteAsync(LearningDocument document, CancellationToken ct = default);
-}
-
-public interface IChatRepository
-{
-    Task<ChatSession> GetOrCreateSessionAsync(Guid studentId, Guid courseId, CancellationToken ct = default);
-    Task<IReadOnlyList<ChatMessage>> GetMessagesAsync(Guid sessionId, Guid? documentId = null, CancellationToken ct = default);
-    Task AddMessageAsync(ChatMessage message, CancellationToken ct = default);
-}
-
-public interface IVectorStore
-{
-    Task UpsertAsync(LearningDocument document, IReadOnlyList<DocumentChunk> chunks, CancellationToken ct = default);
-    Task<IReadOnlyList<RetrievedChunk>> SearchAsync(Guid courseId, Guid documentId, float[] queryVector, int limit, CancellationToken ct = default);
-    Task DeleteDocumentAsync(Guid documentId, CancellationToken ct = default);
-}
-
 public enum EmbeddingTask { Document, Query }
-public interface IEmbeddingService { Task<float[]> EmbedAsync(string text, EmbeddingTask task = EmbeddingTask.Document, CancellationToken ct = default); }
-public interface IDocumentWorkQueue { ValueTask EnqueueAsync(Guid documentId, CancellationToken ct = default); }
-public interface IDocumentStatusNotifier { Task NotifyAsync(Guid documentId, DocumentStatus status, int progress, string? message, CancellationToken ct = default); }
+
+public interface IEmbeddingService
+{
+    Task<float[]> EmbedAsync(string text, EmbeddingTask task = EmbeddingTask.Document, CancellationToken ct = default);
+}
+
+public interface IDocumentWorkQueue
+{
+    ValueTask EnqueueAsync(Guid documentId, CancellationToken ct = default);
+}
+
+public interface IDocumentStatusNotifier
+{
+    Task NotifyAsync(Guid documentId, DocumentStatus status, int progress, string? message, CancellationToken ct = default);
+}
+
 public interface IAnswerGenerator
 {
     Task<string> GenerateAsync(string question, IReadOnlyList<RetrievedChunk> context, IReadOnlyList<ChatMessage> history, CancellationToken ct = default);

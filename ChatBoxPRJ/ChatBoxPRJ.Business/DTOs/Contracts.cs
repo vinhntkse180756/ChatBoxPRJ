@@ -1,4 +1,4 @@
-using ChatBoxPRJ.Business.Domain;
+using ChatBoxPRJ.DataAccess.Models;
 
 namespace ChatBoxPRJ.Business.DTOs;
 
@@ -10,7 +10,6 @@ public sealed record DocumentChunksDto(Guid DocumentId, string FileName, string 
 public sealed record CitationDto(Guid DocumentId, string FileName, int PageNumber, int ChunkNumber, string Excerpt);
 public sealed record ChatMessageDto(Guid Id, MessageRole Role, string Content, IReadOnlyList<CitationDto> Citations, DateTime CreatedAtUtc);
 public sealed record ChatWorkspaceDto(CourseDto Course, Guid SessionId, IReadOnlyList<DocumentDto> Documents, IReadOnlyList<ChatMessageDto> Messages);
-public sealed record RetrievedChunk(Guid ChunkId, Guid DocumentId, string FileName, int PageNumber, int ChunkNumber, string Content, double Score);
 public sealed record UploadRequest(Guid CourseId, Guid UploadedById, string FileName, string ContentType, Stream Content, bool Overwrite);
 public sealed record UploadResult(bool Success, string Message, Guid? DocumentId = null);
 public sealed record ChatAnswer(string Answer, IReadOnlyList<CitationDto> Citations, bool Rejected = false);

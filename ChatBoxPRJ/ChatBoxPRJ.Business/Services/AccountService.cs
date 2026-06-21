@@ -1,10 +1,12 @@
-using ChatBoxPRJ.Business.Domain;
+using AutoMapper;
 using ChatBoxPRJ.Business.DTOs;
 using ChatBoxPRJ.Business.Interfaces;
+using ChatBoxPRJ.DataAccess.Interfaces;
+using ChatBoxPRJ.DataAccess.Models;
 
 namespace ChatBoxPRJ.Business.Services;
 
-public sealed class AccountService(IUserRepository users, IPasswordHasher hasher) : IAccountService
+public sealed class AccountService(IUserRepository users, IPasswordHasher hasher, IMapper mapper) : IAccountService
 {
     public Task<(bool Success, string Message)> RegisterStudentAsync(string code, string fullName, string email, string password, CancellationToken ct = default)
         => CreateAsync(code, fullName, email, password, UserRole.Student, ct);
@@ -28,11 +30,11 @@ public sealed class AccountService(IUserRepository users, IPasswordHasher hasher
     {
         var user = await users.FindByLoginAsync(login.Trim(), ct);
         return user is not null && hasher.Verify(password, user.PasswordHash)
-            ? new UserDto(user.Id, user.Code, user.FullName, user.Email, user.Role) : null;
+            ? mapper.Map<UserDto>(user) : null;
     }
 
     public async Task<IReadOnlyList<UserDto>> ListLecturersAsync(CancellationToken ct = default)
-        => (await users.ListLecturersAsync(ct)).Select(x => new UserDto(x.Id, x.Code, x.FullName, x.Email, x.Role)).ToList();
+        => mapper.Map<IReadOnlyList<UserDto>>(await users.ListLecturersAsync(ct));
 
     public async Task<(bool Success, string Message)> UpdateLecturerAsync(Guid id, string code, string fullName, string email, string? password, CancellationToken ct = default)
     {

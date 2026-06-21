@@ -1,7 +1,7 @@
 using System.Threading.Channels;
-using ChatBoxPRJ.Business.Domain;
 using ChatBoxPRJ.Business.Interfaces;
-using ChatBoxPRJ.Hubs;
+using ChatBoxPRJ.DataAccess.Models;
+using ChatBoxPRJ.Pages.SignalR;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ChatBoxPRJ.Infrastructure;

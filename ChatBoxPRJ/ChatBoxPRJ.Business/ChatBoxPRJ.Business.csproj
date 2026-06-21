@@ -4,4 +4,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="16.1.1" />
+    <ProjectReference Include="..\ChatBoxPRJ.DataAccess\ChatBoxPRJ.DataAccess.csproj" />
+  </ItemGroup>
 </Project>

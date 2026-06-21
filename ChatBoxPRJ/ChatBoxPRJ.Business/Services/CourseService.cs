@@ -1,12 +1,13 @@
-using ChatBoxPRJ.Business.Domain;
+using AutoMapper;
 using ChatBoxPRJ.Business.DTOs;
 using ChatBoxPRJ.Business.Interfaces;
+using ChatBoxPRJ.DataAccess.Interfaces;
+using ChatBoxPRJ.DataAccess.Models;
 
 namespace ChatBoxPRJ.Business.Services;
 
-public sealed class CourseService(ICourseRepository courses) : ICourseService
+public sealed class CourseService(ICourseRepository courses, IMapper mapper) : ICourseService
 {
-    private static CourseDto Map(Course x) => new(x.Id, x.Code, x.Name, x.Credits, x.Description);
     public async Task<(bool Success, string Message)> CreateAsync(string code, string name, int credits, string description, CancellationToken ct = default)
     {
         code = code.Trim().ToUpperInvariant();
@@ -30,8 +31,8 @@ public sealed class CourseService(ICourseRepository courses) : ICourseService
         var paths = await courses.DeleteAsync(id, ct); foreach (var path in paths) if (File.Exists(path)) File.Delete(path);
         return (true, "Đã xóa môn học và toàn bộ dữ liệu liên quan.");
     }
-    public async Task<IReadOnlyList<CourseDto>> ListAsync(CancellationToken ct = default) => (await courses.ListAsync(ct)).Select(Map).ToList();
-    public async Task<IReadOnlyList<CourseDto>> ListForLecturerAsync(Guid lecturerId, CancellationToken ct = default) => (await courses.ListForLecturerAsync(lecturerId, ct)).Select(Map).ToList();
+    public async Task<IReadOnlyList<CourseDto>> ListAsync(CancellationToken ct = default) => mapper.Map<IReadOnlyList<CourseDto>>(await courses.ListAsync(ct));
+    public async Task<IReadOnlyList<CourseDto>> ListForLecturerAsync(Guid lecturerId, CancellationToken ct = default) => mapper.Map<IReadOnlyList<CourseDto>>(await courses.ListForLecturerAsync(lecturerId, ct));
     public Task<IReadOnlySet<Guid>> GetAssignmentsAsync(Guid lecturerId, CancellationToken ct = default) => courses.GetLecturerCourseIdsAsync(lecturerId, ct);
     public async Task<(bool Success, string Message)> SaveAssignmentsAsync(Guid lecturerId, IReadOnlySet<Guid> courseIds, CancellationToken ct = default)
     {

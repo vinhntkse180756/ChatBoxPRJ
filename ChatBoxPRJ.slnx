@@ -1,3 +1,5 @@
 <Solution>
-  <Project Path="ChatBoxPRJ/ChatBoxPRJ.csproj" />
+  <Project Path="ChatBoxPRJ/ChatBoxPRJ.Web.csproj" />
+  <Project Path="ChatBoxPRJ/ChatBoxPRJ.Business/ChatBoxPRJ.Business.csproj" />
+  <Project Path="ChatBoxPRJ/ChatBoxPRJ.DataAccess/ChatBoxPRJ.DataAccess.csproj" />
 </Solution>

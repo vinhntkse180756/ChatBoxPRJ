@@ -5,8 +5,8 @@
 ## Chạy nhanh
 
 ```powershell
-dotnet restore ChatBoxPRJ.csproj --configfile NuGet.Config
-dotnet run --project ChatBoxPRJ.csproj
+dotnet restore ChatBoxPRJ.Web.csproj --configfile NuGet.Config
+dotnet run --project ChatBoxPRJ.Web.csproj
 ```
 
 Ứng dụng luôn dùng SQL Server thật. Hãy tạo `StudentChatBoxDb` bằng script trong thư mục `Database` và cấu hình connection string trước khi chạy.
@@ -68,7 +68,7 @@ Sau đó chạy ứng dụng bằng Windows Authentication:
 
 ```powershell
 $env:ConnectionStrings__ChatBoxDb="Server=(localdb)\MSSQLLocalDB;Database=StudentChatBoxDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
-dotnet run --project .\ChatBoxPRJ\ChatBoxPRJ.csproj
+dotnet run --project .\ChatBoxPRJ\ChatBoxPRJ.Web.csproj
 ```
 
 ## Gemini + SQL Server Vector Store
