@@ -29,14 +29,28 @@ public sealed class ChatService(
         var session = await chats.GetOrCreateSessionAsync(userId, courseId, ct);
         var docs = mapper.Map<IReadOnlyList<DocumentDto>>(await documents.ListAsync(courseId, true, ct));
         var documentNames = docs.ToDictionary(x => x.Id, x => x.FileName);
-        var histories = (await chats.GetHistoriesAsync(session.Id, ct))
-            .Select(x => new ChatHistoryDto(
-                x.ConversationId,
-                x.DocumentId,
-                documentNames.GetValueOrDefault(x.DocumentId, "Tài liệu đã bị xóa"),
-                x.Title,
-                x.MessageCount,
-                x.UpdatedAtUtc))
+        var historyMessages = await chats.GetMessagesAsync(session.Id, ct: ct);
+        var histories = historyMessages
+            .Where(x => x.DocumentId.HasValue)
+            .GroupBy(x => x.ConversationId)
+            .Select(group =>
+            {
+                var firstQuestion = group
+                    .Where(x => x.Role == DataMessageRole.User)
+                    .OrderBy(x => x.CreatedAtUtc)
+                    .Select(x => x.Content.Trim())
+                    .FirstOrDefault() ?? "Cuộc trò chuyện";
+                var title = firstQuestion.Length <= 70 ? firstQuestion : firstQuestion[..70] + "…";
+                var documentId = group.Select(x => x.DocumentId!.Value).First();
+                return new ChatHistoryDto(
+                    group.Key,
+                    documentId,
+                    documentNames.GetValueOrDefault(documentId, "Tài liệu đã bị xóa"),
+                    title,
+                    group.Count(),
+                    group.Max(x => x.CreatedAtUtc));
+            })
+            .OrderByDescending(x => x.UpdatedAtUtc)
             .ToList();
         var messages = conversationId.HasValue
             ? (await chats.GetMessagesAsync(session.Id, conversationId, ct)).Select(MapMessage).ToList()
@@ -65,9 +79,9 @@ public sealed class ChatService(
             await chats.AddMessageAsync(new ChatMessage { SessionId = session.Id, ConversationId = activeConversationId, DocumentId = documentId, Role = DataMessageRole.Assistant, Content = refusal, CitationsJson = "[]" }, ct);
             return new(refusal, [], true, activeConversationId);
         }
-        var answerContext = found.Select(x => new RetrievedChunkContext(
+        var answerContext = found.Select(x => new AnswerChunkContext(
             x.ChunkId, x.DocumentId, x.FileName, x.PageNumber, x.ChunkNumber, x.Content, x.Score)).ToList();
-        var historyContext = history.Select(x => new ChatMessageContext((BusinessMessageRole)x.Role, x.Content)).ToList();
+        var historyContext = history.Select(x => new AnswerMessageContext((BusinessMessageRole)x.Role, x.Content)).ToList();
         var answer = await answers.GenerateAsync(question, answerContext, historyContext, ct);
         var citations = found.Select(x => new CitationDto(x.DocumentId, x.FileName, x.PageNumber, x.ChunkNumber,
             x.Content.Length <= 320 ? x.Content : x.Content[..320] + "…")).ToList();

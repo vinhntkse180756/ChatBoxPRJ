@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using ChatBoxPRJ.Business.DTOs;
 using ChatBoxPRJ.Business.Interfaces;
 
 namespace ChatBoxPRJ.Business.Services;

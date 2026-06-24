@@ -99,10 +99,3 @@ public sealed record RetrievedChunk(
     int ChunkNumber,
     string Content,
     double Score);
-
-public sealed record ChatHistorySummary(
-    Guid ConversationId,
-    Guid DocumentId,
-    string Title,
-    int MessageCount,
-    DateTime UpdatedAtUtc);

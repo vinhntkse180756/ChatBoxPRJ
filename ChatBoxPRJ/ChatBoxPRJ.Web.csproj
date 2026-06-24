@@ -13,7 +13,6 @@
     <Content Remove="ChatBoxPRJ.Business\**\*" />
     <Content Remove="ChatBoxPRJ.DataAccess\**\*" />
     <ProjectReference Include="ChatBoxPRJ.Business\ChatBoxPRJ.Business.csproj" />
-    <ProjectReference Include="ChatBoxPRJ.DataAccess\ChatBoxPRJ.DataAccess.csproj" />
   </ItemGroup>
 
 </Project>

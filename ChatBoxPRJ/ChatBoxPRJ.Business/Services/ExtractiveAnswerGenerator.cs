@@ -5,7 +5,7 @@ namespace ChatBoxPRJ.Business.Services;
 
 public sealed class ExtractiveAnswerGenerator : IAnswerGenerator
 {
-    public Task<string> GenerateAsync(string question, IReadOnlyList<RetrievedChunkContext> context, IReadOnlyList<ChatMessageContext> history, CancellationToken ct = default)
+    public Task<string> GenerateAsync(string question, IReadOnlyList<AnswerChunkContext> context, IReadOnlyList<AnswerMessageContext> history, CancellationToken ct = default)
     {
         var passages = context.Take(3).Select((x, i) => $"{i + 1}. {Shorten(x.Content, 650)}");
         var answer = "Dựa trên tài liệu của môn học, các nội dung liên quan nhất là:\n\n" + string.Join("\n\n", passages) +

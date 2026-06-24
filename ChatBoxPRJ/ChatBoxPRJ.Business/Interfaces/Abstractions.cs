@@ -2,13 +2,6 @@ using ChatBoxPRJ.Business.DTOs;
 
 namespace ChatBoxPRJ.Business.Interfaces;
 
-public enum EmbeddingTask { Document, Query }
-
-public interface IEmbeddingService
-{
-    Task<float[]> EmbedAsync(string text, EmbeddingTask task = EmbeddingTask.Document, CancellationToken ct = default);
-}
-
 public interface IDocumentWorkQueue
 {
     ValueTask EnqueueAsync(Guid documentId, CancellationToken ct = default);
@@ -17,11 +10,6 @@ public interface IDocumentWorkQueue
 public interface IDocumentStatusNotifier
 {
     Task NotifyAsync(Guid documentId, DocumentStatus status, int progress, string? message, CancellationToken ct = default);
-}
-
-public interface IAnswerGenerator
-{
-    Task<string> GenerateAsync(string question, IReadOnlyList<RetrievedChunkContext> context, IReadOnlyList<ChatMessageContext> history, CancellationToken ct = default);
 }
 
 public interface IPasswordHasher
@@ -69,4 +57,9 @@ public interface IChatService
     Task<ChatWorkspaceDto?> OpenWorkspaceAsync(Guid userId, UserRole role, Guid courseId, Guid? conversationId = null, CancellationToken ct = default);
     Task<ChatAnswer> AskAsync(Guid userId, UserRole role, Guid courseId, Guid? conversationId, Guid documentId, string question, CancellationToken ct = default);
     Task<(bool Success, string Message)> DeleteHistoryAsync(Guid userId, UserRole role, Guid courseId, Guid? conversationId = null, CancellationToken ct = default);
+}
+
+public interface IApplicationInitializer
+{
+    Task InitializeAsync(string adminCode, string adminEmail, string adminPassword, CancellationToken ct = default);
 }

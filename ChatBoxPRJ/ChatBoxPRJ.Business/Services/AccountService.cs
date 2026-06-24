@@ -52,7 +52,7 @@ public sealed class AccountService(IUserRepository users, IPasswordHasher hasher
     {
         var user = await users.FindByIdAsync(id, ct);
         if (user is null || user.Role != DataUserRole.Lecturer) return (false, "Không tìm thấy giảng viên.");
-        var paths = (await users.DeleteLecturerAsync(id, ct)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var paths = (await users.DeleteUserAsync(id, ct)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         var failedPaths = new List<string>();
         foreach (var path in paths)
         {
