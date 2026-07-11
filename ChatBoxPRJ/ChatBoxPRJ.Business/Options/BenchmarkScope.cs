@@ -12,6 +12,12 @@ public static class BenchmarkScope
     /// <summary>Page Razor sẽ tạo ở bước UI: /Admin/Benchmarks.</summary>
     public const string AdminPagePath = "/Admin/Benchmarks";
 
+    /// <summary>File test set (Bước 2), relative to Web content root.</summary>
+    public const string TestSetRelativePath = "Data/benchmark-questions.json";
+
+    /// <summary>Mã môn mặc định trong test set (khớp DatabaseSeeder).</summary>
+    public const string DefaultCourseCode = "PRN222";
+
     // ----- 4 metrics bắt buộc -----
 
     /// <summary>Thời gian xử lý 1 câu hỏi (ms), đo bằng Stopwatch quanh pipeline RAG.</summary>
