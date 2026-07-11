@@ -40,3 +40,44 @@ public sealed record ReportDashboardDto(
     IReadOnlyList<NamedCountDto> MessagesByCourse,
     IReadOnlyList<DateCountDto> MessagesByDay,
     IReadOnlyList<DateCountDto> UploadsByDay);
+
+public sealed record BenchmarkResultDto(
+    string QuestionId,
+    string Question,
+    bool ExpectReject,
+    bool Rejected,
+    bool Hit,
+    bool ExpectationMet,
+    long LatencyMs,
+    double TopScore,
+    int CitationCount,
+    string Answer);
+
+public sealed record BenchmarkRunDto(
+    Guid Id,
+    Guid CourseId,
+    string CourseCode,
+    Guid DocumentId,
+    string DocumentFileName,
+    string StartedByCode,
+    DateTime StartedAtUtc,
+    DateTime? FinishedAtUtc,
+    int QuestionCount,
+    int HitCount,
+    int RejectCount,
+    double AverageLatencyMs,
+    double AverageTopScore,
+    int ExpectationMetCount,
+    IReadOnlyList<BenchmarkResultDto> Results);
+
+public sealed record BenchmarkRunSummaryDto(
+    Guid Id,
+    string CourseCode,
+    string DocumentFileName,
+    DateTime StartedAtUtc,
+    int QuestionCount,
+    int HitCount,
+    int RejectCount,
+    double AverageLatencyMs,
+    double AverageTopScore,
+    int ExpectationMetCount);

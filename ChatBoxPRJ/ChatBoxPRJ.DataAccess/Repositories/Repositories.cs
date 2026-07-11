@@ -280,6 +280,7 @@ public sealed class BenchmarkRepository(ChatBoxDbContext db) : IBenchmarkReposit
             .Include(x => x.Course)
             .Include(x => x.Document)
             .Include(x => x.StartedBy)
+            .Include(x => x.Results)
             .OrderByDescending(x => x.StartedAtUtc)
             .Take(take)
             .ToListAsync(ct);

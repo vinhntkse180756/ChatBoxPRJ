@@ -68,3 +68,16 @@ public interface IReportService
 {
     Task<ReportDashboardDto> GetAdminDashboardAsync(DateOnly fromDate, DateOnly toDate, CancellationToken ct = default);
 }
+
+public interface IBenchmarkService
+{
+    Task<(bool Success, string Message, BenchmarkRunDto? Run)> RunAsync(
+        Guid startedByAdminId,
+        string testSetPath,
+        Guid? courseId = null,
+        Guid? documentId = null,
+        CancellationToken ct = default);
+
+    Task<BenchmarkRunDto?> GetRunAsync(Guid runId, CancellationToken ct = default);
+    Task<IReadOnlyList<BenchmarkRunSummaryDto>> ListRecentAsync(int take = 20, CancellationToken ct = default);
+}
