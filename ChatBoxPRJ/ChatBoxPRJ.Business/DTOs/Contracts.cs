@@ -17,3 +17,26 @@ public sealed record ChatWorkspaceDto(CourseDto Course, Guid SessionId, IReadOnl
 public sealed record UploadRequest(Guid CourseId, Guid UploadedById, string FileName, string ContentType, Stream Content, bool Overwrite);
 public sealed record UploadResult(bool Success, string Message, Guid? DocumentId = null);
 public sealed record ChatAnswer(string Answer, IReadOnlyList<CitationDto> Citations, bool Rejected = false, Guid? ConversationId = null);
+
+public sealed record NamedCountDto(string Name, int Count);
+public sealed record DateCountDto(string Date, int Count);
+public sealed record ReportDashboardDto(
+    DateOnly FromDate,
+    DateOnly ToDate,
+    int StudentCount,
+    int LecturerCount,
+    int AdminCount,
+    int CourseCount,
+    int DocumentCount,
+    int ChunkCount,
+    int ChatSessionCount,
+    int ChatMessageCount,
+    int DocumentsCompleted,
+    int DocumentsProcessing,
+    int DocumentsFailed,
+    int UploadsInRange,
+    int MessagesInRange,
+    IReadOnlyList<NamedCountDto> DocumentsByCourse,
+    IReadOnlyList<NamedCountDto> MessagesByCourse,
+    IReadOnlyList<DateCountDto> MessagesByDay,
+    IReadOnlyList<DateCountDto> UploadsByDay);

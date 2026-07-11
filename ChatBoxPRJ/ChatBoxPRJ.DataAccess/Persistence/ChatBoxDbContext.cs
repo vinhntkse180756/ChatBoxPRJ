@@ -12,6 +12,8 @@ public sealed class ChatBoxDbContext(DbContextOptions<ChatBoxDbContext> options)
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
     public DbSet<ChatSession> ChatSessions => Set<ChatSession>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<BenchmarkRun> BenchmarkRuns => Set<BenchmarkRun>();
+    public DbSet<BenchmarkResult> BenchmarkResults => Set<BenchmarkResult>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -32,5 +34,12 @@ public sealed class ChatBoxDbContext(DbContextOptions<ChatBoxDbContext> options)
         model.Entity<ChatSession>().HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
         model.Entity<ChatMessage>().HasOne(x => x.Session).WithMany(x => x.Messages).HasForeignKey(x => x.SessionId).OnDelete(DeleteBehavior.Cascade);
         model.Entity<ChatMessage>().HasIndex(x => new { x.SessionId, x.ConversationId, x.CreatedAtUtc });
+
+        model.Entity<BenchmarkRun>().HasIndex(x => x.StartedAtUtc);
+        model.Entity<BenchmarkRun>().HasOne(x => x.Course).WithMany().HasForeignKey(x => x.CourseId).OnDelete(DeleteBehavior.Restrict);
+        model.Entity<BenchmarkRun>().HasOne(x => x.Document).WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Restrict);
+        model.Entity<BenchmarkRun>().HasOne(x => x.StartedBy).WithMany().HasForeignKey(x => x.StartedById).OnDelete(DeleteBehavior.Restrict);
+        model.Entity<BenchmarkResult>().HasOne(x => x.Run).WithMany(x => x.Results).HasForeignKey(x => x.RunId).OnDelete(DeleteBehavior.Cascade);
+        model.Entity<BenchmarkResult>().HasIndex(x => new { x.RunId, x.QuestionId });
     }
 }

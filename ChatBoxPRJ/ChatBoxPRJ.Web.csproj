@@ -15,4 +15,8 @@
     <ProjectReference Include="ChatBoxPRJ.Business\ChatBoxPRJ.Business.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="Data\benchmark-questions.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

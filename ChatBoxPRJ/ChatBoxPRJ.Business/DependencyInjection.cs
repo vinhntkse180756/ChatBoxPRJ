@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<ICourseService, CourseService>();
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IChatService, ChatService>();
+        services.AddScoped<IReportService, ReportService>();
         services.AddScoped<IApplicationInitializer, ApplicationInitializer>();
         return services;
     }

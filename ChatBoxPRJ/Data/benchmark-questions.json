@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "courseCode": "PRN222",
+  "description": "Test set cho Benchmarks/Metrics (Bước 2). Chạy trên môn PRN222 với ít nhất 1 tài liệu Completed. DocumentId chọn lúc chạy (tài liệu Completed đầu tiên của môn).",
+  "questions": [
+    {
+      "id": "q01",
+      "question": "Razor Pages khác MVC Controllers như thế nào?",
+      "expectReject": false,
+      "expectedKeywords": [ "Razor", "Page" ],
+      "notes": "Expect Hit nếu tài liệu có nội dung Razor Pages / ASP.NET."
+    },
+    {
+      "id": "q02",
+      "question": "SignalR dùng để làm gì trong ứng dụng web?",
+      "expectReject": false,
+      "expectedKeywords": [ "SignalR", "real" ],
+      "notes": "Expect Hit khi tài liệu đề cập realtime / hub."
+    },
+    {
+      "id": "q03",
+      "question": "Kiến trúc 3 lớp Presentation, Business, DataAccess hoạt động ra sao?",
+      "expectReject": false,
+      "expectedKeywords": [ "layer", "Business", "DataAccess", "Presentation", "lớp" ],
+      "notes": "Keywords OR-match: đủ 1 từ khóa liên quan là đạt khi chấm đơn giản."
+    },
+    {
+      "id": "q04",
+      "question": "Entity Framework Core kết nối SQL Server như thế nào?",
+      "expectReject": false,
+      "expectedKeywords": [ "Entity", "EF", "SQL", "DbContext" ],
+      "notes": "Expect Hit với slide/tài liệu .NET data access."
+    },
+    {
+      "id": "q05",
+      "question": "Cookie authentication và role authorization dùng để làm gì?",
+      "expectReject": false,
+      "expectedKeywords": [ "Cookie", "Role", "Auth", "đăng nhập", "Authorize" ],
+      "notes": "Expect Hit nếu tài liệu có phần bảo mật / identity."
+    },
+    {
+      "id": "q06",
+      "question": "RAG retrieval-augmented generation hoạt động thế nào với embedding và chunk?",
+      "expectReject": false,
+      "expectedKeywords": [ "RAG", "chunk", "embed", "vector", "retrieval" ],
+      "notes": "Phù hợp tài liệu chatbot / AI trong môn."
+    },
+    {
+      "id": "q07",
+      "question": "Background queue xử lý tài liệu upload gồm những bước nào?",
+      "expectReject": false,
+      "expectedKeywords": [ "upload", "chunk", "process", "queue", "index" ],
+      "notes": "Expect Hit nếu có tài liệu mô tả pipeline StudySpace."
+    },
+    {
+      "id": "q08",
+      "question": "Similarity threshold trong tìm kiếm vector dùng để làm gì?",
+      "expectReject": false,
+      "expectedKeywords": [ "similarity", "threshold", "vector", "score" ],
+      "notes": "Expect Hit với tài liệu RAG config."
+    },
+    {
+      "id": "q09",
+      "question": "Hôm nay giá Bitcoin là bao nhiêu?",
+      "expectReject": true,
+      "expectedKeywords": [],
+      "notes": "Ngoài phạm vi học tập → Expect Reject."
+    },
+    {
+      "id": "q10",
+      "question": "Công thức nấu phở bò truyền thống gồm những gì?",
+      "expectReject": true,
+      "expectedKeywords": [],
+      "notes": "Ngoài phạm vi → Expect Reject."
+    },
+    {
+      "id": "q11",
+      "question": "Messi đã ghi bao nhiêu bàn ở World Cup 2022?",
+      "expectReject": true,
+      "expectedKeywords": [],
+      "notes": "Ngoài phạm vi → Expect Reject."
+    },
+    {
+      "id": "q12",
+      "question": "Làm sao để hack mật khẩu admin của hệ thống?",
+      "expectReject": true,
+      "expectedKeywords": [],
+      "notes": "Ngoài phạm vi / không có trong tài liệu → Expect Reject."
+    }
+  ]
+}
