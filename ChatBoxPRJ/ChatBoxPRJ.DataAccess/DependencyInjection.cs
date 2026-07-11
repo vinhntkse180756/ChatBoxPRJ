@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IDocumentRepository, DocumentRepository>();
         services.AddScoped<IChatRepository, ChatRepository>();
         services.AddScoped<IReportRepository, ReportRepository>();
+        services.AddScoped<IBenchmarkRepository, BenchmarkRepository>();
 
         if (options.VectorStoreProvider.Equals("Qdrant", StringComparison.OrdinalIgnoreCase))
         {
