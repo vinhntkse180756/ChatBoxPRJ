@@ -8,6 +8,7 @@ public sealed class DatabaseMigrationManager(ChatBoxDbContext db)
     private const string InitialMigration       = "20260621074357_InitialCreate";
     private const string AccessLevelMigration   = "20260621084415_AddLecturerCourseAccessLevel";
     private const string ConversationsMigration = "20260621152114_AddChatConversations";
+    private const string BenchmarksMigration    = "20260711114057_AddBenchmarks";
 
     public async Task MigrateAsync(CancellationToken ct = default)
     {
@@ -62,6 +63,19 @@ public sealed class DatabaseMigrationManager(ChatBoxDbContext db)
                 BEGIN
                     INSERT INTO [dbo].[__EFMigrationsHistory] ([MigrationId], [ProductVersion])
                     VALUES (N'{{ConversationsMigration}}', N'8.0.0');
+                END;
+                """, ct);
+
+            // Nếu bảng BenchmarkRuns đã tồn tại, ghi nhận migration AddBenchmarks.
+            await db.Database.ExecuteSqlRawAsync($$"""
+                IF OBJECT_ID(N'[dbo].[__EFMigrationsHistory]', N'U') IS NOT NULL
+                   AND NOT EXISTS (
+                       SELECT 1 FROM [dbo].[__EFMigrationsHistory]
+                       WHERE [MigrationId] = N'{{BenchmarksMigration}}')
+                   AND OBJECT_ID(N'[dbo].[BenchmarkRuns]', N'U') IS NOT NULL
+                BEGIN
+                    INSERT INTO [dbo].[__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+                    VALUES (N'{{BenchmarksMigration}}', N'8.0.0');
                 END;
                 """, ct);
         }

@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Data\benchmark-questions.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Update="Data\benchmark-questions.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

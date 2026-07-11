@@ -91,6 +91,44 @@ public sealed class ChatMessage
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
 
+/// <summary>Một lần chạy toàn bộ test set benchmark (Admin).</summary>
+public sealed class BenchmarkRun
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid CourseId { get; set; }
+    public Course Course { get; set; } = null!;
+    public Guid DocumentId { get; set; }
+    public LearningDocument Document { get; set; } = null!;
+    public Guid StartedById { get; set; }
+    public AppUser StartedBy { get; set; } = null!;
+    public DateTime StartedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? FinishedAtUtc { get; set; }
+    public int QuestionCount { get; set; }
+    public int HitCount { get; set; }
+    public int RejectCount { get; set; }
+    public double AverageLatencyMs { get; set; }
+    public double AverageTopScore { get; set; }
+    public ICollection<BenchmarkResult> Results { get; set; } = [];
+}
+
+/// <summary>Kết quả 1 câu trong test set — lưu 4 metric đã chốt ở BenchmarkScope.</summary>
+public sealed class BenchmarkResult
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid RunId { get; set; }
+    public BenchmarkRun Run { get; set; } = null!;
+    [MaxLength(20)] public string QuestionId { get; set; } = "";
+    [MaxLength(1000)] public string Question { get; set; } = "";
+    public bool ExpectReject { get; set; }
+    public bool Rejected { get; set; }
+    public bool Hit { get; set; }
+    public bool ExpectationMet { get; set; }
+    public long LatencyMs { get; set; }
+    public double TopScore { get; set; }
+    public int CitationCount { get; set; }
+    public string Answer { get; set; } = "";
+}
+
 public sealed record RetrievedChunk(
     Guid ChunkId,
     Guid DocumentId,
