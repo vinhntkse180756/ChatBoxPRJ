@@ -54,3 +54,30 @@ public interface IVectorStore
     Task<IReadOnlyList<RetrievedChunk>> SearchAsync(Guid courseId, Guid documentId, float[] queryVector, int limit, CancellationToken ct = default);
     Task DeleteDocumentAsync(Guid documentId, CancellationToken ct = default);
 }
+
+public sealed record NamedCountRow(string Name, int Count);
+public sealed record DateCountRow(DateOnly Date, int Count);
+
+public sealed record ReportSnapshot(
+    int StudentCount,
+    int LecturerCount,
+    int AdminCount,
+    int CourseCount,
+    int DocumentCount,
+    int ChunkCount,
+    int ChatSessionCount,
+    int ChatMessageCount,
+    int DocumentsCompleted,
+    int DocumentsProcessing,
+    int DocumentsFailed,
+    int UploadsInRange,
+    int MessagesInRange,
+    IReadOnlyList<NamedCountRow> DocumentsByCourse,
+    IReadOnlyList<NamedCountRow> MessagesByCourse,
+    IReadOnlyList<DateCountRow> MessagesByDay,
+    IReadOnlyList<DateCountRow> UploadsByDay);
+
+public interface IReportRepository
+{
+    Task<ReportSnapshot> GetSnapshotAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
+}

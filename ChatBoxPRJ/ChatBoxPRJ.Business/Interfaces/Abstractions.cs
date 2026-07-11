@@ -63,3 +63,8 @@ public interface IApplicationInitializer
 {
     Task InitializeAsync(string adminCode, string adminEmail, string adminPassword, CancellationToken ct = default);
 }
+
+public interface IReportService
+{
+    Task<ReportDashboardDto> GetAdminDashboardAsync(DateOnly fromDate, DateOnly toDate, CancellationToken ct = default);
+}

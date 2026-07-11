@@ -163,6 +163,94 @@ public sealed class ChatRepository(ChatBoxDbContext db) : IChatRepository
     }
 }
 
+public sealed class ReportRepository(ChatBoxDbContext db) : IReportRepository
+{
+    public async Task<ReportSnapshot> GetSnapshotAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default)
+    {
+        var users = await db.Users.AsNoTracking()
+            .GroupBy(x => x.Role)
+            .Select(g => new { Role = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
+        int CountRole(UserRole role) => users.FirstOrDefault(x => x.Role == role)?.Count ?? 0;
+
+        var courseCount = await db.Courses.AsNoTracking().CountAsync(ct);
+        var documentCount = await db.Documents.AsNoTracking().CountAsync(ct);
+        var chunkCount = await db.DocumentChunks.AsNoTracking().CountAsync(ct);
+        var sessionCount = await db.ChatSessions.AsNoTracking().CountAsync(ct);
+        var messageCount = await db.ChatMessages.AsNoTracking().CountAsync(ct);
+
+        var statusCounts = await db.Documents.AsNoTracking()
+            .GroupBy(x => x.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
+        int StatusCount(DocumentStatus status) => statusCounts.FirstOrDefault(x => x.Status == status)?.Count ?? 0;
+
+        var uploadsInRange = await db.Documents.AsNoTracking()
+            .CountAsync(x => x.UploadedAtUtc >= fromUtc && x.UploadedAtUtc < toUtc, ct);
+        var messagesInRange = await db.ChatMessages.AsNoTracking()
+            .CountAsync(x => x.CreatedAtUtc >= fromUtc && x.CreatedAtUtc < toUtc, ct);
+
+        var documentsByCourse = await db.Documents.AsNoTracking()
+            .GroupBy(x => new { x.CourseId, x.Course.Code })
+            .Select(g => new NamedCountRow(g.Key.Code, g.Count()))
+            .OrderByDescending(x => x.Count)
+            .Take(10)
+            .ToListAsync(ct);
+
+        var messagesByCourse = await db.ChatMessages.AsNoTracking()
+            .Where(x => x.CreatedAtUtc >= fromUtc && x.CreatedAtUtc < toUtc)
+            .GroupBy(x => x.Session.Course.Code)
+            .Select(g => new NamedCountRow(g.Key, g.Count()))
+            .OrderByDescending(x => x.Count)
+            .Take(10)
+            .ToListAsync(ct);
+
+        var messageDays = await db.ChatMessages.AsNoTracking()
+            .Where(x => x.CreatedAtUtc >= fromUtc && x.CreatedAtUtc < toUtc)
+            .GroupBy(x => x.CreatedAtUtc.Date)
+            .Select(g => new { Day = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
+        var uploadDays = await db.Documents.AsNoTracking()
+            .Where(x => x.UploadedAtUtc >= fromUtc && x.UploadedAtUtc < toUtc)
+            .GroupBy(x => x.UploadedAtUtc.Date)
+            .Select(g => new { Day = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
+        return new ReportSnapshot(
+            CountRole(UserRole.Student),
+            CountRole(UserRole.Lecturer),
+            CountRole(UserRole.Admin),
+            courseCount,
+            documentCount,
+            chunkCount,
+            sessionCount,
+            messageCount,
+            StatusCount(DocumentStatus.Completed),
+            StatusCount(DocumentStatus.Processing),
+            StatusCount(DocumentStatus.Failed),
+            uploadsInRange,
+            messagesInRange,
+            documentsByCourse,
+            messagesByCourse,
+            FillDays(fromUtc, toUtc, messageDays.Select(x => (x.Day, x.Count))),
+            FillDays(fromUtc, toUtc, uploadDays.Select(x => (x.Day, x.Count))));
+    }
+
+    private static IReadOnlyList<DateCountRow> FillDays(DateTime fromUtc, DateTime toUtc, IEnumerable<(DateTime Day, int Count)> raw)
+    {
+        var map = raw.ToDictionary(x => DateOnly.FromDateTime(x.Day), x => x.Count);
+        var start = DateOnly.FromDateTime(fromUtc);
+        var endExclusive = DateOnly.FromDateTime(toUtc);
+        var rows = new List<DateCountRow>();
+        for (var day = start; day < endExclusive; day = day.AddDays(1))
+            rows.Add(new DateCountRow(day, map.GetValueOrDefault(day)));
+        return rows;
+    }
+}
+
 public sealed class EfVectorStore(ChatBoxDbContext db) : IVectorStore
 {
     // Các vector fallback được lưu cùng DocumentChunk bởi DocumentRepository.

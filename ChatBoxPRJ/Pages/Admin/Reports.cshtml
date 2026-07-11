@@ -1,0 +1,155 @@
+@page
+@model ChatBoxPRJ.Pages.Admin.ReportsModel
+@{ ViewData["Title"] = "Báo cáo & Thống kê"; }
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">ANALYTICS</span>
+        <h1>Báo cáo &amp; Thống kê</h1>
+        <p>Theo dõi tài liệu, chat RAG và hoạt động hệ thống theo khoảng thời gian.</p>
+    </div>
+</div>
+
+<form method="get" class="report-filter panel">
+    <div class="report-filter-grid">
+        <div>
+            <label for="FromDate">Từ ngày</label>
+            <input asp-for="FromDate" type="date" class="form-control" />
+        </div>
+        <div>
+            <label for="ToDate">Đến ngày</label>
+            <input asp-for="ToDate" type="date" class="form-control" />
+        </div>
+        <div class="report-filter-actions">
+            <button class="btn btn-primary" type="submit">Áp dụng</button>
+            <a class="btn btn-outline-secondary" asp-page="/Admin/Reports">30 ngày gần nhất</a>
+        </div>
+    </div>
+</form>
+
+<div class="report-kpi-grid">
+    <article class="report-kpi"><span>Sinh viên</span><b>@Model.Dashboard.StudentCount</b></article>
+    <article class="report-kpi"><span>Giảng viên</span><b>@Model.Dashboard.LecturerCount</b></article>
+    <article class="report-kpi"><span>Môn học</span><b>@Model.Dashboard.CourseCount</b></article>
+    <article class="report-kpi"><span>Tài liệu</span><b>@Model.Dashboard.DocumentCount</b></article>
+    <article class="report-kpi"><span>Chunks</span><b>@Model.Dashboard.ChunkCount</b></article>
+    <article class="report-kpi"><span>Phiên chat</span><b>@Model.Dashboard.ChatSessionCount</b></article>
+    <article class="report-kpi accent"><span>Tin nhắn (kỳ)</span><b>@Model.Dashboard.MessagesInRange</b></article>
+    <article class="report-kpi accent"><span>Upload (kỳ)</span><b>@Model.Dashboard.UploadsInRange</b></article>
+</div>
+
+<div class="report-chart-grid">
+    <section class="panel report-chart-card">
+        <h2>Tin nhắn chat theo ngày</h2>
+        <p>Số message User + Assistant trong khoảng đã chọn.</p>
+        <canvas id="messagesByDayChart" height="120"></canvas>
+    </section>
+    <section class="panel report-chart-card">
+        <h2>Trạng thái tài liệu</h2>
+        <p>Completed / Processing / Failed toàn hệ thống.</p>
+        <div class="report-doughnut-wrap"><canvas id="documentStatusChart"></canvas></div>
+    </section>
+    <section class="panel report-chart-card">
+        <h2>Tài liệu theo môn học</h2>
+        <p>Top 10 môn có nhiều tài liệu nhất.</p>
+        <canvas id="documentsByCourseChart" height="140"></canvas>
+    </section>
+    <section class="panel report-chart-card">
+        <h2>Chat theo môn học</h2>
+        <p>Top 10 môn được hỏi nhiều trong kỳ.</p>
+        <canvas id="messagesByCourseChart" height="140"></canvas>
+    </section>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+(() => {
+    const data = @Html.Raw(Model.ChartJson);
+    const green = '#176b52';
+    const greenSoft = '#dff3e8';
+    const amber = '#f1b94b';
+    const red = '#c84b4b';
+    const ink = '#18201d';
+    const muted = '#66716c';
+
+    const baseOptions = {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: { backgroundColor: ink }
+        },
+        scales: {
+            x: { ticks: { color: muted, maxRotation: 45, minRotation: 0 }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { color: muted, precision: 0 }, grid: { color: '#e8eee9' } }
+        }
+    };
+
+    new Chart(document.getElementById('messagesByDayChart'), {
+        type: 'line',
+        data: {
+            labels: data.messagesByDay.labels,
+            datasets: [{
+                label: 'Tin nhắn',
+                data: data.messagesByDay.values,
+                borderColor: green,
+                backgroundColor: 'rgba(23,107,82,.12)',
+                fill: true,
+                tension: .3,
+                pointRadius: 2,
+                pointHoverRadius: 5
+            }]
+        },
+        options: baseOptions
+    });
+
+    new Chart(document.getElementById('documentStatusChart'), {
+        type: 'doughnut',
+        data: {
+            labels: data.documentStatus.labels,
+            datasets: [{
+                data: data.documentStatus.values,
+                backgroundColor: [green, amber, red],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: muted } }
+            }
+        }
+    });
+
+    new Chart(document.getElementById('documentsByCourseChart'), {
+        type: 'bar',
+        data: {
+            labels: data.documentsByCourse.labels,
+            datasets: [{
+                label: 'Tài liệu',
+                data: data.documentsByCourse.values,
+                backgroundColor: green,
+                borderRadius: 6
+            }]
+        },
+        options: baseOptions
+    });
+
+    new Chart(document.getElementById('messagesByCourseChart'), {
+        type: 'bar',
+        data: {
+            labels: data.messagesByCourse.labels,
+            datasets: [{
+                label: 'Tin nhắn',
+                data: data.messagesByCourse.values,
+                backgroundColor: greenSoft,
+                borderColor: green,
+                borderWidth: 1,
+                borderRadius: 6
+            }]
+        },
+        options: baseOptions
+    });
+})();
+</script>
+}
