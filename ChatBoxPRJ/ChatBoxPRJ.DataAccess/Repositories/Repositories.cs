@@ -192,32 +192,40 @@ public sealed class ReportRepository(ChatBoxDbContext db) : IReportRepository
         var messagesInRange = await db.ChatMessages.AsNoTracking()
             .CountAsync(x => x.CreatedAtUtc >= fromUtc && x.CreatedAtUtc < toUtc, ct);
 
-        var documentsByCourse = await db.Documents.AsNoTracking()
-            .GroupBy(x => new { x.CourseId, x.Course.Code })
-            .Select(g => new NamedCountRow(g.Key.Code, g.Count()))
+        // Project anonymous types first — EF cannot translate constructors of NamedCountRow after GroupBy.
+        var documentsByCourseRaw = await db.Documents.AsNoTracking()
+            .GroupBy(x => x.Course.Code)
+            .Select(g => new { Name = g.Key, Count = g.Count() })
             .OrderByDescending(x => x.Count)
             .Take(10)
             .ToListAsync(ct);
 
-        var messagesByCourse = await db.ChatMessages.AsNoTracking()
+        var messagesByCourseRaw = await db.ChatMessages.AsNoTracking()
             .Where(x => x.CreatedAtUtc >= fromUtc && x.CreatedAtUtc < toUtc)
             .GroupBy(x => x.Session.Course.Code)
-            .Select(g => new NamedCountRow(g.Key, g.Count()))
+            .Select(g => new { Name = g.Key, Count = g.Count() })
             .OrderByDescending(x => x.Count)
             .Take(10)
             .ToListAsync(ct);
 
-        var messageDays = await db.ChatMessages.AsNoTracking()
+        var messageDaysRaw = await db.ChatMessages.AsNoTracking()
             .Where(x => x.CreatedAtUtc >= fromUtc && x.CreatedAtUtc < toUtc)
-            .GroupBy(x => x.CreatedAtUtc.Date)
-            .Select(g => new { Day = g.Key, Count = g.Count() })
+            .Select(x => x.CreatedAtUtc)
             .ToListAsync(ct);
 
-        var uploadDays = await db.Documents.AsNoTracking()
+        var uploadDaysRaw = await db.Documents.AsNoTracking()
             .Where(x => x.UploadedAtUtc >= fromUtc && x.UploadedAtUtc < toUtc)
-            .GroupBy(x => x.UploadedAtUtc.Date)
-            .Select(g => new { Day = g.Key, Count = g.Count() })
+            .Select(x => x.UploadedAtUtc)
             .ToListAsync(ct);
+
+        var messageDays = messageDaysRaw
+            .GroupBy(x => x.Date)
+            .Select(g => (g.Key, g.Count()))
+            .ToList();
+        var uploadDays = uploadDaysRaw
+            .GroupBy(x => x.Date)
+            .Select(g => (g.Key, g.Count()))
+            .ToList();
 
         return new ReportSnapshot(
             CountRole(UserRole.Student),
@@ -233,10 +241,10 @@ public sealed class ReportRepository(ChatBoxDbContext db) : IReportRepository
             StatusCount(DocumentStatus.Failed),
             uploadsInRange,
             messagesInRange,
-            documentsByCourse,
-            messagesByCourse,
-            FillDays(fromUtc, toUtc, messageDays.Select(x => (x.Day, x.Count))),
-            FillDays(fromUtc, toUtc, uploadDays.Select(x => (x.Day, x.Count))));
+            documentsByCourseRaw.Select(x => new NamedCountRow(x.Name, x.Count)).ToList(),
+            messagesByCourseRaw.Select(x => new NamedCountRow(x.Name, x.Count)).ToList(),
+            FillDays(fromUtc, toUtc, messageDays),
+            FillDays(fromUtc, toUtc, uploadDays));
     }
 
     private static IReadOnlyList<DateCountRow> FillDays(DateTime fromUtc, DateTime toUtc, IEnumerable<(DateTime Day, int Count)> raw)
