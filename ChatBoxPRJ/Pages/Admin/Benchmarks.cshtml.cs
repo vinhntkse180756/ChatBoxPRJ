@@ -75,7 +75,7 @@ public sealed class BenchmarksModel(
         }
 
         CourseOptions = allCourses
-            .Select(x => new SelectListItem(x.Code + " — " + x.Name, x.Id.ToString(), CourseId == x.Id))
+            .Select(x => new SelectListItem($"{x.Code} — {x.Name}", x.Id.ToString(), CourseId == x.Id))
             .ToList();
 
         if (CourseId.HasValue)

@@ -14,24 +14,24 @@
     <div class="alert alert-@(Model.FlashType ?? "info")">@Model.Flash</div>
 }
 
-<div class="panel report-filter">
-    <form method="get" class="report-filter-grid" id="courseFilterForm">
-        <div>
+<div class="panel report-filter benchmark-filter">
+    <form method="get" class="benchmark-filter-row" id="courseFilterForm">
+        <div class="benchmark-field">
             <label asp-for="CourseId">Môn học</label>
             <select asp-for="CourseId" asp-items="Model.CourseOptions" class="form-select" onchange="this.form.submit()">
                 <option value="">— Chọn môn —</option>
             </select>
         </div>
     </form>
-    <form method="post" asp-page-handler="Run" class="report-filter-grid" style="margin-top:14px">
+    <form method="post" asp-page-handler="Run" class="benchmark-filter-row">
         <input type="hidden" asp-for="CourseId" />
-        <div>
+        <div class="benchmark-field">
             <label asp-for="DocumentId">Tài liệu (Completed)</label>
             <select asp-for="DocumentId" asp-items="Model.DocumentOptions" class="form-select">
                 <option value="">— Tự chọn tài liệu đầu —</option>
             </select>
         </div>
-        <div class="report-filter-actions">
+        <div class="benchmark-actions">
             <button class="btn btn-primary" type="submit">Chạy benchmark</button>
         </div>
     </form>
