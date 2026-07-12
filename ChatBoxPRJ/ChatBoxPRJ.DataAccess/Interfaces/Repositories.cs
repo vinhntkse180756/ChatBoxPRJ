@@ -81,3 +81,10 @@ public interface IReportRepository
 {
     Task<ReportSnapshot> GetSnapshotAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
 }
+
+public interface IBenchmarkRepository
+{
+    Task AddRunAsync(BenchmarkRun run, CancellationToken ct = default);
+    Task<BenchmarkRun?> FindRunAsync(Guid runId, CancellationToken ct = default);
+    Task<IReadOnlyList<BenchmarkRun>> ListRecentRunsAsync(int take = 20, CancellationToken ct = default);
+}

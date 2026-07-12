@@ -259,6 +259,33 @@ public sealed class ReportRepository(ChatBoxDbContext db) : IReportRepository
     }
 }
 
+public sealed class BenchmarkRepository(ChatBoxDbContext db) : IBenchmarkRepository
+{
+    public async Task AddRunAsync(BenchmarkRun run, CancellationToken ct = default)
+    {
+        db.BenchmarkRuns.Add(run);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public Task<BenchmarkRun?> FindRunAsync(Guid runId, CancellationToken ct = default)
+        => db.BenchmarkRuns.AsNoTracking()
+            .Include(x => x.Course)
+            .Include(x => x.Document)
+            .Include(x => x.StartedBy)
+            .Include(x => x.Results)
+            .FirstOrDefaultAsync(x => x.Id == runId, ct);
+
+    public async Task<IReadOnlyList<BenchmarkRun>> ListRecentRunsAsync(int take = 20, CancellationToken ct = default)
+        => await db.BenchmarkRuns.AsNoTracking()
+            .Include(x => x.Course)
+            .Include(x => x.Document)
+            .Include(x => x.StartedBy)
+            .Include(x => x.Results)
+            .OrderByDescending(x => x.StartedAtUtc)
+            .Take(take)
+            .ToListAsync(ct);
+}
+
 public sealed class EfVectorStore(ChatBoxDbContext db) : IVectorStore
 {
     // Các vector fallback được lưu cùng DocumentChunk bởi DocumentRepository.
