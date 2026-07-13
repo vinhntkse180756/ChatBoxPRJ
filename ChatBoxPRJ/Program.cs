@@ -55,6 +55,7 @@ builder.Services.AddBusinessLayer(new ApplicationLayerOptions
 builder.Services.AddSingleton<DocumentWorkQueue>();
 builder.Services.AddSingleton<IDocumentWorkQueue>(sp => sp.GetRequiredService<DocumentWorkQueue>());
 builder.Services.AddSingleton<IDocumentStatusNotifier, SignalRDocumentStatusNotifier>();
+builder.Services.AddSingleton<ICourseStatusNotifier, SignalRCourseStatusNotifier>();
 builder.Services.AddHostedService<DocumentWorker>();
 
 var app = builder.Build();
@@ -66,6 +67,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapRazorPages();
 app.MapHub<DocumentHub>("/hubs/documents");
+app.MapHub<CourseHub>("/hubs/courses");
 
 using (var scope = app.Services.CreateScope())
 {

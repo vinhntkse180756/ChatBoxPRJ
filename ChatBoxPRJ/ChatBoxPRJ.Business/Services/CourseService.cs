@@ -10,14 +10,19 @@ using DataUserRole = ChatBoxPRJ.DataAccess.Models.UserRole;
 
 namespace ChatBoxPRJ.Business.Services;
 
-public sealed class CourseService(ICourseRepository courses, IUserRepository users, IMapper mapper) : ICourseService
+public sealed class CourseService(ICourseRepository courses, IUserRepository users, IMapper mapper, ICourseStatusNotifier notifier) : ICourseService
 {
     public async Task<(bool Success, string Message)> CreateAsync(string code, string name, int credits, string description, CancellationToken ct = default)
     {
         code = code.Trim().ToUpperInvariant();
         if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name) || credits is < 1 or > 20) return (false, "Thông tin môn học không hợp lệ.");
         if (await courses.CodeExistsAsync(code, ct)) return (false, "Mã môn học đã tồn tại.");
-        await courses.AddAsync(new Course { Code = code, Name = name.Trim(), Credits = credits, Description = description.Trim() }, ct);
+        var course = new Course { Code = code, Name = name.Trim(), Credits = credits, Description = description.Trim() };
+        await courses.AddAsync(course, ct);
+        
+        var dto = mapper.Map<CourseDto>(course);
+        await notifier.NotifyCourseCreatedAsync(dto, ct);
+
         return (true, "Đã tạo môn học.");
     }
     public async Task<(bool Success, string Message)> UpdateAsync(Guid id, string code, string name, int credits, string description, CancellationToken ct = default)
@@ -27,12 +32,20 @@ public sealed class CourseService(ICourseRepository courses, IUserRepository use
         if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name) || credits is < 1 or > 20) return (false, "Thông tin môn học không hợp lệ.");
         if ((await courses.ListAsync(ct)).Any(x => x.Id != id && x.Code == code)) return (false, "Mã môn học đã tồn tại.");
         course.Code = code; course.Name = name.Trim(); course.Credits = credits; course.Description = description.Trim();
-        await courses.UpdateAsync(course, ct); return (true, "Đã cập nhật môn học.");
+        await courses.UpdateAsync(course, ct);
+        
+        var dto = mapper.Map<CourseDto>(course);
+        await notifier.NotifyCourseUpdatedAsync(dto, ct);
+
+        return (true, "Đã cập nhật môn học.");
     }
     public async Task<(bool Success, string Message)> DeleteAsync(Guid id, CancellationToken ct = default)
     {
         if (await courses.FindAsync(id, ct) is null) return (false, "Không tìm thấy môn học.");
         var paths = await courses.DeleteAsync(id, ct); foreach (var path in paths) if (File.Exists(path)) File.Delete(path);
+        
+        await notifier.NotifyCourseDeletedAsync(id, ct);
+
         return (true, "Đã xóa môn học và toàn bộ dữ liệu liên quan.");
     }
     public async Task<IReadOnlyList<CourseDto>> ListAsync(CancellationToken ct = default) => mapper.Map<IReadOnlyList<CourseDto>>(await courses.ListAsync(ct));
