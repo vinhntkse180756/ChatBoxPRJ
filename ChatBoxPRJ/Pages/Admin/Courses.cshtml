@@ -1,7 +1,188 @@
 @page
 @model ChatBoxPRJ.Pages.Admin.CoursesModel
-@{ ViewData["Title"] = "Môn học"; }
-<div class="page-heading"><div><span class="eyebrow">ACADEMIC CATALOG</span><h1>Quản lý môn học</h1><p>Admin tạo, sửa và xóa môn học. Xóa môn sẽ xóa cả phân công và tài liệu liên quan.</p></div></div>
-@if (Model.Flash is not null) { <div class="alert alert-info">@Model.Flash</div> }
-<div class="split-layout"><section class="panel"><h2>Tạo môn học</h2><form method="post" class="form-stack"><label>Mã môn</label><input asp-for="Code" class="form-control"/><label>Tên môn</label><input asp-for="Name" class="form-control"/><label>Số tín chỉ</label><input asp-for="Credits" class="form-control"/><label>Mô tả</label><textarea asp-for="Description" class="form-control"></textarea><button class="btn btn-primary">Tạo môn học</button></form></section>
-<section class="panel grow"><h2>Danh mục hiện có</h2>@foreach(var c in Model.Courses){<form method="post" asp-page-handler="Update" class="form-stack border rounded p-3 mb-3"><input type="hidden" name="EditId" value="@c.Id"/><div class="row g-2"><div class="col-md-2"><input name="Code" value="@c.Code" class="form-control"/></div><div class="col-md-4"><input name="Name" value="@c.Name" class="form-control"/></div><div class="col-md-2"><input name="Credits" value="@c.Credits" type="number" class="form-control"/></div><div class="col-md-4"><input name="Description" value="@c.Description" class="form-control"/></div></div><div class="d-flex gap-2"><button class="btn btn-outline-primary">Lưu sửa đổi</button><button class="btn btn-outline-danger" formaction="?handler=Delete&id=@c.Id" onclick="return confirm('Xóa môn học và toàn bộ tài liệu liên quan?')">Xóa</button></div></form>}</section></div>
+@{
+    ViewData["Title"] = "Quản lý môn học";
+}
+
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">ACADEMIC CATALOG</span>
+        <h1>Quản lý môn học</h1>
+        <p>Tạo mới, chỉnh sửa hoặc xóa các môn học trong hệ thống. Việc xóa môn học sẽ đồng thời gỡ bỏ phân quyền giảng viên và toàn bộ tài liệu liên quan.</p>
+    </div>
+</div>
+
+@if (Model.Flash is not null)
+{
+    <div class="alert alert-info" role="alert">
+        @Model.Flash
+    </div>
+}
+
+<div class="split-layout">
+    <!-- Danh sách môn học chiếm trọn chiều rộng -->
+    <section class="panel grow">
+        <div class="panel-title">
+            <div>
+                <h2>Danh mục hiện có</h2>
+                <p>Danh sách các môn học đang hoạt động trên hệ thống</p>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <!-- Nút tạo môn học mới được đặt ở đây với kích cỡ vừa phải, không xuống dòng -->
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCourseModal" style="white-space: nowrap;">
+                    Tạo môn học
+                </button>
+                <span class="count-pill">@Model.Courses.Count môn học</span>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 150px;">Mã môn</th>
+                        <th>Tên môn học</th>
+                        <th style="width: 100px; text-align: center;">Tín chỉ</th>
+                        <th>Mô tả</th>
+                        <th style="width: 120px; text-align: right;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model.Courses)
+                    {
+                        <tr>
+                            <td>
+                                <span class="count-pill">@c.Code</span>
+                            </td>
+                            <td>
+                                <strong>@c.Name</strong>
+                            </td>
+                            <td style="text-align: center;">
+                                @c.Credits
+                            </td>
+                            <td>
+                                <div class="text-truncate" style="max-width: 400px;" title="@c.Description">
+                                    @(string.IsNullOrWhiteSpace(c.Description) ? "Chưa có mô tả môn học." : c.Description)
+                                </div>
+                            </td>
+                            <td>
+                                <div class="row-actions justify-content-end">
+                                    <button type="button" class="icon-btn edit-course-btn" 
+                                            data-id="@c.Id" 
+                                            data-code="@c.Code" 
+                                            data-name="@c.Name" 
+                                            data-credits="@c.Credits" 
+                                            data-description="@c.Description"
+                                            title="Sửa môn học">✏️</button>
+                                    <form method="post" asp-page-handler="Delete" asp-route-id="@c.Id" onsubmit="return confirm('Xóa môn học này sẽ xóa toàn bộ phân quyền và tài liệu liên quan. Bạn có chắc chắn muốn xóa?')">
+                                        <button type="submit" class="icon-btn text-danger" title="Xóa môn học">🗑️</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Courses.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">Chưa có môn học nào trên hệ thống.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<!-- Modal tạo môn học mới -->
+<div class="modal fade" id="createCourseModal" tabindex="-1" aria-labelledby="createCourseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createCourseModalLabel">Tạo môn học mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body form-stack">
+                    <div>
+                        <label asp-for="Code">Mã môn học</label>
+                        <input asp-for="Code" class="form-control" placeholder="Ví dụ: PRN222" required />
+                    </div>
+                    <div>
+                        <label asp-for="Name">Tên môn học</label>
+                        <input asp-for="Name" class="form-control" placeholder="Ví dụ: Advanced Programming..." required />
+                    </div>
+                    <div>
+                        <label asp-for="Credits">Số tín chỉ</label>
+                        <input asp-for="Credits" type="number" class="form-control" min="1" max="20" required />
+                    </div>
+                    <div>
+                        <label asp-for="Description">Mô tả môn học</label>
+                        <textarea asp-for="Description" class="form-control" rows="4" placeholder="Nhập mô tả ngắn gọn về nội dung môn học..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Tạo môn học</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal chỉnh sửa môn học -->
+<div class="modal fade" id="editCourseModal" tabindex="-1" aria-labelledby="editCourseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editCourseModalLabel">Cập nhật môn học</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" asp-page-handler="Update">
+                <input type="hidden" name="EditId" id="editCourseId" />
+                <div class="modal-body form-stack">
+                    <div>
+                        <label for="editCourseCode">Mã môn học</label>
+                        <input name="Code" id="editCourseCode" class="form-control" required />
+                    </div>
+                    <div>
+                        <label for="editCourseName">Tên môn học</label>
+                        <input name="Name" id="editCourseName" class="form-control" required />
+                    </div>
+                    <div>
+                        <label for="editCourseCredits">Số tín chỉ</label>
+                        <input name="Credits" id="editCourseCredits" type="number" class="form-control" min="1" max="20" required />
+                    </div>
+                    <div>
+                        <label for="editCourseDescription">Mô tả môn học</label>
+                        <textarea name="Description" id="editCourseDescription" class="form-control" rows="4"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const editModalEl = document.getElementById('editCourseModal');
+            const editModal = new bootstrap.Modal(editModalEl);
+
+            document.querySelectorAll('.edit-course-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    document.getElementById('editCourseId').value = this.getAttribute('data-id');
+                    document.getElementById('editCourseCode').value = this.getAttribute('data-code');
+                    document.getElementById('editCourseName').value = this.getAttribute('data-name');
+                    document.getElementById('editCourseCredits').value = this.getAttribute('data-credits');
+                    document.getElementById('editCourseDescription').value = this.getAttribute('data-description') || '';
+                    
+                    editModal.show();
+                });
+            });
+        });
+    </script>
+}
