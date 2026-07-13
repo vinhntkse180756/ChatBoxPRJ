@@ -120,7 +120,13 @@ public sealed class DocumentRepository(ChatBoxDbContext db) : IDocumentRepositor
         if (completedOnly) query = query.Where(x => x.Status == DocumentStatus.Completed);
         return await query.OrderByDescending(x => x.UploadedAtUtc).ToListAsync(ct);
     }
-    public async Task DeleteAsync(LearningDocument document, CancellationToken ct = default) { db.Documents.Remove(document); await db.SaveChangesAsync(ct); }
+    public async Task DeleteAsync(LearningDocument document, CancellationToken ct = default) 
+    { 
+        var benchmarkRuns = await db.BenchmarkRuns.Where(x => x.DocumentId == document.Id).ToListAsync(ct);
+        db.BenchmarkRuns.RemoveRange(benchmarkRuns);
+        db.Documents.Remove(document); 
+        await db.SaveChangesAsync(ct); 
+    }
 }
 
 public sealed class ChatRepository(ChatBoxDbContext db) : IChatRepository

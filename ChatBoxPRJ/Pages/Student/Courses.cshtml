@@ -20,53 +20,32 @@
     </form>
 </div>
 
-<div class="student-course-layout">
+<div class="student-courses-container">
     <section class="student-course-grid" aria-label="Danh sách môn học">
         @foreach (var course in Model.Courses) {
-            <a class="student-course-card @(Model.CourseId == course.Id ? "active" : "")" data-course-id="@course.Id"
-               asp-page="/Student/Courses" asp-route-courseId="@course.Id" asp-route-search="@Model.Search">
-                <span class="student-course-code">@course.Code</span>
+            <a class="student-course-card" data-course-id="@course.Id"
+               asp-page="/Student/CourseDetails" asp-route-courseId="@course.Id">
+                <div class="card-header-row">
+                    <span class="student-course-code">@course.Code</span>
+                    <span class="student-course-credits">@course.Credits tín chỉ</span>
+                </div>
                 <h2>@course.Name</h2>
                 <p>@(string.IsNullOrWhiteSpace(course.Description) ? "Chưa có mô tả môn học." : course.Description)</p>
-                <footer><span>@course.Credits tín chỉ</span><b>Xem tài liệu →</b></footer>
+                <div class="student-course-footer">
+                    <span class="action-text">Xem tài liệu</span>
+                    <span class="action-icon">→</span>
+                </div>
             </a>
         }
         @if (!Model.Courses.Any()) {
-            <div class="panel student-course-empty">
-                <span>⌕</span><h2>Không tìm thấy môn học</h2>
+            <div class="student-course-empty">
+                <span>⌕</span>
+                <h2>Không tìm thấy môn học</h2>
                 <p>Không có mã môn nào khớp với “@Model.Search”.</p>
                 <a asp-page="/Student/Courses">Xem tất cả môn học</a>
             </div>
         }
     </section>
-
-    <aside class="panel student-document-panel" data-selected-course-id="@Model.SelectedCourse?.Id">
-        @if (Model.SelectedCourse is null) {
-            <div class="student-document-placeholder">
-                <span>📚</span><h2>Chọn một môn học</h2>
-                <p>Bấm vào môn học bên trái để xem các tài liệu đã được giảng viên trưởng bộ môn upload.</p>
-            </div>
-        } else {
-            <div class="student-document-title">
-                <div><span class="eyebrow">@Model.SelectedCourse.Code</span><h2>@Model.SelectedCourse.Name</h2></div>
-                <span class="count-pill">@Model.Documents.Count tài liệu</span>
-            </div>
-            <div class="student-document-list">
-                @foreach (var document in Model.Documents) {
-                    <article>
-                        <span class="student-file-icon">📄</span>
-                        <div><b>@document.FileName</b><small>Đăng ngày @document.UploadedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</small></div>
-                        <a class="btn btn-sm btn-outline-primary" asp-page-handler="Download"
-                           asp-route-documentId="@document.Id" asp-route-courseId="@document.CourseId">Tải xuống</a>
-                    </article>
-                }
-                @if (!Model.Documents.Any()) {
-                    <div class="student-document-placeholder compact"><span>📭</span><h3>Chưa có tài liệu</h3><p>Môn học này chưa có tài liệu đã xử lý hoàn thành.</p></div>
-                }
-            </div>
-            <a class="btn btn-primary student-chat-link" asp-page="/Student/Chat" asp-route-courseId="@Model.SelectedCourse.Id">Hỏi đáp về môn học</a>
-        }
-    </aside>
 </div>
 
 @section Scripts {
@@ -135,7 +114,7 @@ function checkEmptyGrid(grid) {
         const searchInput = document.getElementById('Search');
         const searchVal = searchInput ? searchInput.value.trim() : '';
         const emptyPanel = document.createElement('div');
-        emptyPanel.className = 'panel student-course-empty';
+        emptyPanel.className = 'student-course-empty';
         if (searchVal) {
             emptyPanel.innerHTML = `
                 <span>⌕</span><h2>Không tìm thấy môn học</h2>
@@ -171,19 +150,21 @@ function handleNewCourse(course) {
     }
 
     // Build course card
-    const searchParam = searchVal ? `&search=${encodeURIComponent(searchVal)}` : '';
-    const href = `/Student/Courses?courseId=${course.id}${searchParam}`;
-    const desc = course.description ? course.description : 'Chưa có mô tả môn học.';
-    
     const card = document.createElement('a');
     card.className = 'student-course-card newly-created-card';
     card.setAttribute('data-course-id', course.id);
-    card.href = href;
+    card.href = `/Student/CourseDetails?courseId=${course.id}`;
     card.innerHTML = `
-        <span class="student-course-code">${escapeHtml(course.code)}</span>
+        <div class="card-header-row">
+            <span class="student-course-code">${escapeHtml(course.code)}</span>
+            <span class="student-course-credits">${course.credits} tín chỉ</span>
+        </div>
         <h2>${escapeHtml(course.name)}</h2>
-        <p>${escapeHtml(desc)}</p>
-        <footer><span>${course.credits} tín chỉ</span><b>Xem tài liệu →</b></footer>
+        <p>${escapeHtml(course.description ? course.description : 'Chưa có mô tả môn học.')}</p>
+        <div class="student-course-footer">
+            <span class="action-text">Xem tài liệu</span>
+            <span class="action-icon">→</span>
+        </div>
     `;
 
     grid.appendChild(card);
@@ -205,9 +186,9 @@ function handleUpdateCourse(course) {
             checkEmptyGrid(grid);
         } else {
             existingCard.querySelector('.student-course-code').textContent = course.code;
+            existingCard.querySelector('.student-course-credits').textContent = `${course.credits} tín chỉ`;
             existingCard.querySelector('h2').textContent = course.name;
             existingCard.querySelector('p').textContent = course.description ? course.description : 'Chưa có mô tả môn học.';
-            existingCard.querySelector('footer span').textContent = `${course.credits} tín chỉ`;
             
             existingCard.classList.remove('newly-updated-card');
             void existingCard.offsetWidth; // trigger reflow
@@ -217,14 +198,6 @@ function handleUpdateCourse(course) {
         if (matchesFilter) {
             handleNewCourse(course);
         }
-    }
-
-    const sidebar = document.querySelector('.student-document-panel');
-    if (sidebar && sidebar.dataset.selectedCourseId === course.id) {
-        const eyebrow = sidebar.querySelector('.eyebrow');
-        if (eyebrow) eyebrow.textContent = course.code;
-        const h2 = sidebar.querySelector('h2');
-        if (h2) h2.textContent = course.name;
     }
 }
 
@@ -239,17 +212,6 @@ function handleDeleteCourse(courseId) {
             existingCard.remove();
             checkEmptyGrid(grid);
         });
-    }
-
-    const sidebar = document.querySelector('.student-document-panel');
-    if (sidebar && sidebar.dataset.selectedCourseId === courseId) {
-        sidebar.innerHTML = `
-            <div class="student-document-placeholder">
-                <span>📚</span><h2>Môn học đã bị xóa</h2>
-                <p>Môn học này đã bị quản trị viên gỡ bỏ khỏi hệ thống.</p>
-            </div>
-        `;
-        sidebar.dataset.selectedCourseId = '';
     }
 }
 
