@@ -7,10 +7,10 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace ChatBoxPRJ.Pages.Admin;
 public sealed class CoursesModel(ICourseService service) : PageModel
 {
-    [BindProperty, Required] public string Code { get; set; } = "";
-    [BindProperty, Required] public string Name { get; set; } = "";
-    [BindProperty, Range(1, 20)] public int Credits { get; set; } = 3;
-    [BindProperty] public string Description { get; set; } = "";
+    [BindProperty, Required(ErrorMessage = "Vui lòng nhập mã môn học.")] public string Code { get; set; } = "";
+    [BindProperty, Required(ErrorMessage = "Vui lòng nhập tên môn học.")] public string Name { get; set; } = "";
+    [BindProperty, Range(1, 20, ErrorMessage = "Số tín chỉ phải từ 1 đến 20.")] public int Credits { get; set; } = 3;
+    [BindProperty, Required(ErrorMessage = "Vui lòng nhập mô tả môn học.")] public string Description { get; set; } = "";
     [BindProperty] public Guid EditId { get; set; }
     public IReadOnlyList<CourseDto> Courses { get; set; } = [];
     [TempData] public string? Flash { get; set; }
