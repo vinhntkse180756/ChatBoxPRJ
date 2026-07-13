@@ -1,0 +1,108 @@
+@page
+@model ChatBoxPRJ.Pages.Student.CourseDetailsModel
+@{
+    ViewData["Title"] = Model.Course?.Name ?? "Chi tiết môn học";
+}
+
+<div class="course-details-container">
+    <div class="details-back-header">
+        <a class="btn-back" asp-page="/Student/Courses">
+            <span>← Quay lại danh sách môn học</span>
+        </a>
+    </div>
+
+    <div class="student-course-heading details-header">
+        <div>
+            <span class="eyebrow">@Model.Course?.Code</span>
+            <h1>@Model.Course?.Name</h1>
+            <p class="course-desc">@(string.IsNullOrWhiteSpace(Model.Course?.Description) ? "Chưa có mô tả môn học." : Model.Course?.Description)</p>
+            <div class="course-meta-pills">
+                <span class="count-pill">@Model.Course?.Credits tín chỉ</span>
+                <span class="count-pill bg-light">@Model.Documents.Count tài liệu học tập</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="student-details-layout">
+        <section class="panel grow document-list-section">
+            <div class="panel-title">
+                <div>
+                    <h2>Tài liệu môn học</h2>
+                    <p>Các tài liệu đã được giảng viên trưởng bộ môn kiểm duyệt và công bố</p>
+                </div>
+            </div>
+
+            <div class="student-document-list">
+                @foreach (var document in Model.Documents) {
+                    <article class="document-item">
+                        <div class="document-icon">
+                            <span class="icon-file">📄</span>
+                        </div>
+                        <div class="document-info">
+                            <span class="document-name" title="@document.FileName">@document.FileName</span>
+                            <span class="document-meta">Đăng ngày @document.UploadedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                        </div>
+                        <div class="document-actions">
+                            <a class="btn-download" asp-page-handler="Download"
+                               asp-route-documentId="@document.Id" asp-route-courseId="@Model.Course?.Id" title="Tải xuống tài liệu">📥</a>
+                        </div>
+                    </article>
+                }
+                @if (!Model.Documents.Any()) {
+                    <div class="student-document-placeholder">
+                        <div class="placeholder-icon">📭</div>
+                        <h2>Chưa có tài liệu</h2>
+                        <p>Môn học này chưa có tài liệu đã xử lý hoàn thành.</p>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <aside class="panel chat-cta-sidebar">
+            <div class="chat-cta-card">
+                <span class="cta-icon">💬</span>
+                <h3>Hỏi đáp AI Chat</h3>
+                <p>Bạn có thắc mắc về nội dung các tài liệu? Hãy trò chuyện với AI chuyên biệt của môn học này để nhận câu trả lời ngay lập tức.</p>
+                <a class="btn btn-primary student-chat-link" asp-page="/Student/Chat" asp-route-courseId="@Model.Course?.Id">
+                    <span>💬 Bắt đầu Hỏi đáp AI</span>
+                </a>
+            </div>
+        </aside>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+async function connectCourseHub() {
+    try {
+        const response = await fetch('/hubs/courses/negotiate?negotiateVersion=1', { method: 'POST' });
+        if (!response.ok) throw new Error('Không thể kết nối');
+        const negotiation = await response.json();
+        const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+        const socket = new WebSocket(`${protocol}://${location.host}/hubs/courses?id=${encodeURIComponent(negotiation.connectionToken)}`);
+        
+        socket.addEventListener('open', () => socket.send('{"protocol":"json","version":1}\u001e'));
+        socket.addEventListener('message', event => {
+            event.data.split('\u001e').filter(Boolean).forEach(raw => {
+                const message = JSON.parse(raw);
+                if (message.type === 1) {
+                    if (message.target === 'courseDeleted' && message.arguments[0] === '@Model.Course?.Id.ToString()') {
+                        alert('Môn học này đã bị quản trị viên gỡ bỏ.');
+                        window.location.href = '/Student/Courses';
+                    } else if (message.target === 'courseUpdated' && message.arguments[0].id === '@Model.Course?.Id.ToString()') {
+                        const course = message.arguments[0];
+                        document.querySelector('.eyebrow').textContent = course.code;
+                        document.querySelector('h1').textContent = course.name;
+                        document.querySelector('.course-desc').textContent = course.description || 'Chưa có mô tả môn học.';
+                    }
+                }
+            });
+        });
+        socket.addEventListener('close', () => setTimeout(connectCourseHub, 2000));
+    } catch {
+        setTimeout(connectCourseHub, 2000);
+    }
+}
+connectCourseHub();
+</script>
+}
