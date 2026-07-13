@@ -1,7 +1,180 @@
 @page
 @model ChatBoxPRJ.Pages.Admin.LecturersModel
-@{ ViewData["Title"] = "Giảng viên"; }
-<div class="page-heading"><div><span class="eyebrow">IDENTITY & ACCESS</span><h1>Quản lý giảng viên</h1><p>Quyền upload chỉ có sau khi được gán làm trưởng bộ môn.</p></div></div>
-@if(Model.Flash is not null){<div class="alert alert-@(Model.FlashType ?? "info")" role="alert">@Model.Flash</div>}
-<div class="split-layout"><section class="panel"><h2>Cấp tài khoản mới</h2><form method="post" class="form-stack"><label>Mã giảng viên</label><input asp-for="Code" class="form-control"/><label>Họ tên</label><input asp-for="FullName" class="form-control"/><label>Email</label><input asp-for="Email" class="form-control"/><label>Mật khẩu</label><input asp-for="Password" type="password" class="form-control"/><button class="btn btn-primary">Tạo giảng viên</button></form></section>
-<section class="panel grow"><h2>Danh sách giảng viên</h2>@foreach(var u in Model.Lecturers){<form method="post" asp-page-handler="Update" class="form-stack border rounded p-3 mb-3"><input type="hidden" name="EditId" value="@u.Id"/><div class="row g-2"><div class="col-md-2"><input name="Code" value="@u.Code" class="form-control"/></div><div class="col-md-3"><input name="FullName" value="@u.FullName" class="form-control"/></div><div class="col-md-4"><input name="Email" value="@u.Email" class="form-control"/></div><div class="col-md-3"><input name="Password" type="password" placeholder="Mật khẩu mới (tùy chọn)" class="form-control"/></div></div><div class="d-flex gap-2"><button class="btn btn-outline-primary">Lưu sửa đổi</button><button class="btn btn-outline-danger" formaction="?handler=Delete&id=@u.Id" onclick="return confirm('Xóa giảng viên và các tài liệu do người này tải lên?')">Xóa</button></div></form>}</section></div>
+@{
+    ViewData["Title"] = "Quản lý giảng viên";
+}
+
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">IDENTITY & ACCESS</span>
+        <h1>Quản lý giảng viên</h1>
+        <p>Quyền tải lên tài liệu môn học và quản trị chỉ có sau khi giảng viên được gán làm Trưởng bộ môn ở trang Phân quyền.</p>
+    </div>
+</div>
+
+@if (Model.Flash is not null)
+{
+    <div class="alert alert-@(Model.FlashType ?? "info")" role="alert">
+        @Model.Flash
+    </div>
+}
+
+<div class="split-layout">
+    <!-- Danh sách giảng viên chiếm toàn bộ chiều rộng -->
+    <section class="panel grow">
+        <div class="panel-title">
+            <div>
+                <h2>Danh sách giảng viên</h2>
+                <p>Danh sách các tài khoản giảng viên hoạt động trên hệ thống</p>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createLecturerModal" style="white-space: nowrap;">
+                    Tạo giảng viên
+                </button>
+                <span class="count-pill">@Model.Lecturers.Count tài khoản</span>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 150px;">Mã giảng viên</th>
+                        <th>Họ tên</th>
+                        <th>Email</th>
+                        <th style="width: 120px; text-align: right;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in Model.Lecturers)
+                    {
+                        <tr>
+                            <td>
+                                <span class="count-pill">@u.Code</span>
+                            </td>
+                            <td>
+                                <strong>@u.FullName</strong>
+                            </td>
+                            <td>
+                                @u.Email
+                            </td>
+                            <td>
+                                <div class="row-actions justify-content-end">
+                                    <button type="button" class="icon-btn edit-lecturer-btn" 
+                                            data-id="@u.Id" 
+                                            data-code="@u.Code" 
+                                            data-fullname="@u.FullName" 
+                                            data-email="@u.Email"
+                                            title="Sửa thông tin">✏️</button>
+                                    <form method="post" asp-page-handler="Delete" asp-route-id="@u.Id" onsubmit="return confirm('Xóa giảng viên này sẽ gỡ bỏ toàn bộ phân quyền môn học và tài liệu liên quan. Bạn có chắc chắn muốn xóa?')">
+                                        <button type="submit" class="icon-btn text-danger" title="Xóa tài khoản">🗑️</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Lecturers.Any())
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">Chưa có tài khoản giảng viên nào được tạo.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<!-- Modal tạo tài khoản giảng viên -->
+<div class="modal fade" id="createLecturerModal" tabindex="-1" aria-labelledby="createLecturerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createLecturerModalLabel">Cấp tài khoản giảng viên mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body form-stack">
+                    <div>
+                        <label asp-for="Code">Mã giảng viên</label>
+                        <input asp-for="Code" class="form-control" placeholder="Ví dụ: GV01" required />
+                    </div>
+                    <div>
+                        <label asp-for="FullName">Họ tên</label>
+                        <input asp-for="FullName" class="form-control" placeholder="Ví dụ: Nguyễn Văn A" required />
+                    </div>
+                    <div>
+                        <label asp-for="Email">Địa chỉ Email</label>
+                        <input asp-for="Email" type="email" class="form-control" placeholder="Ví dụ: gv@example.com" required />
+                    </div>
+                    <div>
+                        <label asp-for="Password">Mật khẩu ban đầu</label>
+                        <input asp-for="Password" type="password" class="form-control" required placeholder="Tối thiểu 6 ký tự" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Tạo tài khoản</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal chỉnh sửa tài khoản giảng viên -->
+<div class="modal fade" id="editLecturerModal" tabindex="-1" aria-labelledby="editLecturerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editLecturerModalLabel">Cập nhật tài khoản giảng viên</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" asp-page-handler="Update">
+                <input type="hidden" name="EditId" id="editLecturerId" />
+                <div class="modal-body form-stack">
+                    <div>
+                        <label for="editLecturerCode">Mã giảng viên</label>
+                        <input name="Code" id="editLecturerCode" class="form-control" required />
+                    </div>
+                    <div>
+                        <label for="editLecturerFullName">Họ tên</label>
+                        <input name="FullName" id="editLecturerFullName" class="form-control" required />
+                    </div>
+                    <div>
+                        <label for="editLecturerEmail">Địa chỉ Email</label>
+                        <input name="Email" id="editLecturerEmail" type="email" class="form-control" required />
+                    </div>
+                    <div>
+                        <label for="editLecturerPassword">Mật khẩu mới (tùy chọn)</label>
+                        <input name="Password" id="editLecturerPassword" type="password" class="form-control" placeholder="Để trống nếu không muốn đổi" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const editModalEl = document.getElementById('editLecturerModal');
+            const editModal = new bootstrap.Modal(editModalEl);
+
+            document.querySelectorAll('.edit-lecturer-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    document.getElementById('editLecturerId').value = this.getAttribute('data-id');
+                    document.getElementById('editLecturerCode').value = this.getAttribute('data-code');
+                    document.getElementById('editLecturerFullName').value = this.getAttribute('data-fullname');
+                    document.getElementById('editLecturerEmail').value = this.getAttribute('data-email');
+                    document.getElementById('editLecturerPassword').value = ''; // Luôn để trống trường mật khẩu khi mở modal
+                    
+                    editModal.show();
+                });
+            });
+        });
+    </script>
+}

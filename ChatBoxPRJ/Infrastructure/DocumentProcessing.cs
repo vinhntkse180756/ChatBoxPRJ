@@ -41,3 +41,15 @@ public sealed class SignalRDocumentStatusNotifier(IHubContext<DocumentHub> hub) 
             message
         }, ct);
 }
+
+public sealed class SignalRCourseStatusNotifier(IHubContext<CourseHub> hub) : ICourseStatusNotifier
+{
+    public Task NotifyCourseCreatedAsync(CourseDto course, CancellationToken ct = default)
+        => hub.Clients.All.SendAsync("courseCreated", course, ct);
+
+    public Task NotifyCourseUpdatedAsync(CourseDto course, CancellationToken ct = default)
+        => hub.Clients.All.SendAsync("courseUpdated", course, ct);
+
+    public Task NotifyCourseDeletedAsync(Guid courseId, CancellationToken ct = default)
+        => hub.Clients.All.SendAsync("courseDeleted", courseId, ct);
+}

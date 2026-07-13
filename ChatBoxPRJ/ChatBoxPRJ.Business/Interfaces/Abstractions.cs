@@ -12,6 +12,13 @@ public interface IDocumentStatusNotifier
     Task NotifyAsync(Guid documentId, DocumentStatus status, int progress, string? message, CancellationToken ct = default);
 }
 
+public interface ICourseStatusNotifier
+{
+    Task NotifyCourseCreatedAsync(CourseDto course, CancellationToken ct = default);
+    Task NotifyCourseUpdatedAsync(CourseDto course, CancellationToken ct = default);
+    Task NotifyCourseDeletedAsync(Guid courseId, CancellationToken ct = default);
+}
+
 public interface IPasswordHasher
 {
     string Hash(string password);

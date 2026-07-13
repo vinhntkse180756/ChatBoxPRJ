@@ -23,7 +23,7 @@
 <div class="student-course-layout">
     <section class="student-course-grid" aria-label="Danh sách môn học">
         @foreach (var course in Model.Courses) {
-            <a class="student-course-card @(Model.CourseId == course.Id ? "active" : "")"
+            <a class="student-course-card @(Model.CourseId == course.Id ? "active" : "")" data-course-id="@course.Id"
                asp-page="/Student/Courses" asp-route-courseId="@course.Id" asp-route-search="@Model.Search">
                 <span class="student-course-code">@course.Code</span>
                 <h2>@course.Name</h2>
@@ -40,7 +40,7 @@
         }
     </section>
 
-    <aside class="panel student-document-panel">
+    <aside class="panel student-document-panel" data-selected-course-id="@Model.SelectedCourse?.Id">
         @if (Model.SelectedCourse is null) {
             <div class="student-document-placeholder">
                 <span>📚</span><h2>Chọn một môn học</h2>
@@ -68,3 +68,191 @@
         }
     </aside>
 </div>
+
+@section Scripts {
+<style>
+@@keyframes highlightNewCard {
+    0% { opacity: 0; transform: translateY(12px); background-color: #f0fdf4; border-color: #86efac; }
+    50% { background-color: #f0fdf4; border-color: #86efac; }
+    100% { opacity: 1; transform: translateY(0); }
+}
+.newly-created-card {
+    animation: highlightNewCard 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@@keyframes highlightUpdateCard {
+    0% { background-color: #fef9c3; border-color: #fde047; }
+    100% { }
+}
+.newly-updated-card {
+    animation: highlightUpdateCard 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@@keyframes fadeOutCard {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.95); margin-bottom: -80px; }
+}
+.deleting-card {
+    animation: fadeOutCard 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+</style>
+<script>
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+async function connectCourseHub() {
+    try {
+        const response = await fetch('/hubs/courses/negotiate?negotiateVersion=1', { method: 'POST' });
+        if (!response.ok) throw new Error('Không thể kết nối');
+        const negotiation = await response.json();
+        const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+        const socket = new WebSocket(`${protocol}://${location.host}/hubs/courses?id=${encodeURIComponent(negotiation.connectionToken)}`);
+        
+        socket.addEventListener('open', () => socket.send('{"protocol":"json","version":1}\u001e'));
+        socket.addEventListener('message', event => {
+            event.data.split('\u001e').filter(Boolean).forEach(raw => {
+                const message = JSON.parse(raw);
+                if (message.type === 1) {
+                    if (message.target === 'courseCreated') {
+                        handleNewCourse(message.arguments[0]);
+                    } else if (message.target === 'courseUpdated') {
+                        handleUpdateCourse(message.arguments[0]);
+                    } else if (message.target === 'courseDeleted') {
+                        handleDeleteCourse(message.arguments[0]);
+                    }
+                }
+            });
+        });
+        socket.addEventListener('close', () => setTimeout(connectCourseHub, 2000));
+    } catch {
+        setTimeout(connectCourseHub, 2000);
+    }
+}
+
+function checkEmptyGrid(grid) {
+    if (grid.querySelector('.student-course-empty')) return;
+    if (!grid.querySelector('.student-course-card')) {
+        const searchInput = document.getElementById('Search');
+        const searchVal = searchInput ? searchInput.value.trim() : '';
+        const emptyPanel = document.createElement('div');
+        emptyPanel.className = 'panel student-course-empty';
+        if (searchVal) {
+            emptyPanel.innerHTML = `
+                <span>⌕</span><h2>Không tìm thấy môn học</h2>
+                <p>Không có mã môn nào khớp với “${escapeHtml(searchVal)}”.</p>
+                <a href="/Student/Courses">Xem tất cả môn học</a>
+            `;
+        } else {
+            emptyPanel.innerHTML = `
+                <span>📭</span><h2>Không có môn học</h2>
+                <p>Hiện tại hệ thống chưa có môn học nào.</p>
+                <a href="/Student/Courses">Tải lại</a>
+            `;
+        }
+        grid.appendChild(emptyPanel);
+    }
+}
+
+function handleNewCourse(course) {
+    const grid = document.querySelector('.student-course-grid');
+    if (!grid) return;
+
+    // Check search filter if active
+    const searchInput = document.getElementById('Search');
+    const searchVal = searchInput ? searchInput.value.trim() : '';
+    if (searchVal && !course.code.toLowerCase().includes(searchVal.toLowerCase())) {
+        return; 
+    }
+
+    // Remove empty panel if it exists
+    const emptyPanel = grid.querySelector('.student-course-empty');
+    if (emptyPanel) {
+        emptyPanel.remove();
+    }
+
+    // Build course card
+    const searchParam = searchVal ? `&search=${encodeURIComponent(searchVal)}` : '';
+    const href = `/Student/Courses?courseId=${course.id}${searchParam}`;
+    const desc = course.description ? course.description : 'Chưa có mô tả môn học.';
+    
+    const card = document.createElement('a');
+    card.className = 'student-course-card newly-created-card';
+    card.setAttribute('data-course-id', course.id);
+    card.href = href;
+    card.innerHTML = `
+        <span class="student-course-code">${escapeHtml(course.code)}</span>
+        <h2>${escapeHtml(course.name)}</h2>
+        <p>${escapeHtml(desc)}</p>
+        <footer><span>${course.credits} tín chỉ</span><b>Xem tài liệu →</b></footer>
+    `;
+
+    grid.appendChild(card);
+}
+
+function handleUpdateCourse(course) {
+    const grid = document.querySelector('.student-course-grid');
+    if (!grid) return;
+
+    const searchInput = document.getElementById('Search');
+    const searchVal = searchInput ? searchInput.value.trim() : '';
+    const matchesFilter = !searchVal || course.code.toLowerCase().includes(searchVal.toLowerCase());
+
+    const existingCard = grid.querySelector(`[data-course-id="${course.id}"]`);
+
+    if (existingCard) {
+        if (!matchesFilter) {
+            existingCard.remove();
+            checkEmptyGrid(grid);
+        } else {
+            existingCard.querySelector('.student-course-code').textContent = course.code;
+            existingCard.querySelector('h2').textContent = course.name;
+            existingCard.querySelector('p').textContent = course.description ? course.description : 'Chưa có mô tả môn học.';
+            existingCard.querySelector('footer span').textContent = `${course.credits} tín chỉ`;
+            
+            existingCard.classList.remove('newly-updated-card');
+            void existingCard.offsetWidth; // trigger reflow
+            existingCard.classList.add('newly-updated-card');
+        }
+    } else {
+        if (matchesFilter) {
+            handleNewCourse(course);
+        }
+    }
+
+    const sidebar = document.querySelector('.student-document-panel');
+    if (sidebar && sidebar.dataset.selectedCourseId === course.id) {
+        const eyebrow = sidebar.querySelector('.eyebrow');
+        if (eyebrow) eyebrow.textContent = course.code;
+        const h2 = sidebar.querySelector('h2');
+        if (h2) h2.textContent = course.name;
+    }
+}
+
+function handleDeleteCourse(courseId) {
+    const grid = document.querySelector('.student-course-grid');
+    if (!grid) return;
+
+    const existingCard = grid.querySelector(`[data-course-id="${courseId}"]`);
+    if (existingCard) {
+        existingCard.classList.add('deleting-card');
+        existingCard.addEventListener('animationend', () => {
+            existingCard.remove();
+            checkEmptyGrid(grid);
+        });
+    }
+
+    const sidebar = document.querySelector('.student-document-panel');
+    if (sidebar && sidebar.dataset.selectedCourseId === courseId) {
+        sidebar.innerHTML = `
+            <div class="student-document-placeholder">
+                <span>📚</span><h2>Môn học đã bị xóa</h2>
+                <p>Môn học này đã bị quản trị viên gỡ bỏ khỏi hệ thống.</p>
+            </div>
+        `;
+        sidebar.dataset.selectedCourseId = '';
+    }
+}
+
+connectCourseHub();
+</script>
+}

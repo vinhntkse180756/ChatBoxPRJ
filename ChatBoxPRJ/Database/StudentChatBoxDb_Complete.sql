@@ -6,7 +6,7 @@
     2. Ket noi bang Windows Authentication hoac tai khoan co quyen CREATE DATABASE.
     3. Execute toan bo file nay. Khong can bat SQLCMD Mode.
 
-    Script co the chay lai, khong xoa du lieu dang co.
+    Script co the chay lai, khong xoa du lieu dang co.	
     Tai khoan admin mac dinh: admin / Admin@123
 
     Enum values:
@@ -14,7 +14,7 @@
     - LecturerCourses.AccessLevel: 0 = Lecturer, 1 = CourseHead
     - Documents.Status: 0 = Processing, 1 = Completed, 2 = Failed
     - ChatMessages.Role: 0 = User, 1 = Assistant
-*/
+*/ 
 
 USE [master];
 GO
