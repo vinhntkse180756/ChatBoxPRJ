@@ -1,0 +1,187 @@
+@page
+@model ChatBoxPRJ.Pages.Student.MockPaymentPortalModel
+@{
+    Layout = null; // Cổng thanh toán bên ngoài nên không sử dụng layout mặc định của dự án
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cổng Thanh Toán VNPAY - Thử Nghiệm</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        body {
+            background-color: #f2f6f9;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #333;
+        }
+        .vnpay-wrapper {
+            max-width: 680px;
+            margin: 60px auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 112, 192, 0.08);
+            border: 1px solid #e1e9f0;
+            overflow: hidden;
+        }
+        .vnpay-header {
+            background: linear-gradient(135deg, #0070c0, #00508f);
+            color: #fff;
+            padding: 24px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .vnpay-header h1 {
+            font-size: 1.4rem;
+            margin: 0;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+        }
+        .vnpay-header span {
+            background: rgba(255, 255, 255, 0.15);
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 99px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .vnpay-body {
+            padding: 36px 40px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 14px 0;
+            border-bottom: 1px solid #f0f4f8;
+            font-size: 0.95rem;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            color: #666;
+            font-weight: 500;
+        }
+        .info-value {
+            font-weight: 700;
+            color: #111;
+        }
+        .amount-big {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #0070c0;
+        }
+        .sandbox-alert {
+            background-color: #fff9e6;
+            border: 1px solid #f6dfa5;
+            color: #8c640b;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 0.88rem;
+            margin-bottom: 28px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .btn-vnpay {
+            background: #0070c0;
+            border-color: #0070c0;
+            color: #fff;
+            font-weight: 700;
+            padding: 12px 24px;
+            border-radius: 10px;
+            transition: all 0.2s;
+            width: 100%;
+            height: 50px;
+        }
+        .btn-vnpay:hover {
+            background: #005694;
+            border-color: #005694;
+            color: #fff;
+            transform: translateY(-1px);
+        }
+        .btn-cancel {
+            background: #fff;
+            border: 1.5px solid #d1dbe5;
+            color: #ff4d4d;
+            font-weight: 700;
+            padding: 12px 24px;
+            border-radius: 10px;
+            transition: all 0.2s;
+            width: 100%;
+            height: 50px;
+            margin-top: 12px;
+        }
+        .btn-cancel:hover {
+            background: #fff2f2;
+            border-color: #ffcccc;
+            color: #cc0000;
+        }
+    </style>
+</head>
+<body>
+
+<div class="vnpay-wrapper">
+    <div class="vnpay-header">
+        <h1>VNPAY GATEWAY</h1>
+        <span>Cổng kiểm thử</span>
+    </div>
+    
+    <div class="vnpay-body">
+        <div class="sandbox-alert">
+            <span style="font-size: 1.3rem;">ℹ️</span>
+            <div>
+                <strong>Môi trường giả lập thử nghiệm!</strong>
+                <div style="margin-top: 4px; line-height: 1.5; opacity: 0.9;">Đây là hệ thống thanh toán giả lập dành riêng cho dự án học tập. Bạn không cần nhập thông tin tài khoản ngân hàng thật và không mất bất kỳ khoản phí nào.</div>
+            </div>
+        </div>
+
+        <div style="background: #fafbfc; border: 1px solid #e9eff5; border-radius: 12px; padding: 18px 24px; margin-bottom: 30px;">
+            <div class="info-row">
+                <span class="info-label">Đơn vị thụ hưởng</span>
+                <span class="info-value">STUDYSPACE PROJECT</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Mã giao dịch (VNPAY Ref)</span>
+                <span class="info-value">@Model.TransactionNo</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Gói cước đăng ký</span>
+                <span class="info-value">@Model.PackageName</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Số tiền thanh toán</span>
+                <span class="info-value amount-big">@Model.Amount.ToString("N0") đ</span>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12 col-md-6">
+                <form method="post" asp-page-handler="Success">
+                    <input type="hidden" name="transactionNo" value="@Model.TransactionNo" />
+                    <button type="submit" class="btn btn-vnpay">
+                        Thanh toán thành công
+                    </button>
+                </form>
+            </div>
+            <div class="col-12 col-md-6" style="margin-top: 0;">
+                <form method="post" asp-page-handler="Cancel">
+                    <input type="hidden" name="transactionNo" value="@Model.TransactionNo" />
+                    <button type="submit" class="btn btn-cancel">
+                        Hủy giao dịch thanh toán
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

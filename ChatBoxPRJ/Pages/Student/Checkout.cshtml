@@ -1,0 +1,58 @@
+@page
+@model ChatBoxPRJ.Pages.Student.CheckoutModel
+@{
+    ViewData["Title"] = "Xác Nhận Thanh Toán";
+}
+
+<div class="details-back-header">
+    <a class="btn-back" asp-page="/Student/Packages">← Quay lại cửa hàng</a>
+</div>
+
+<div class="auth-shell" style="min-height: auto; padding: 20px 0;">
+    <div class="auth-card" style="width: min(520px, 100%);">
+        <span class="eyebrow">CHECKOUT</span>
+        <h1 style="font-size: 1.8rem; margin-top: 10px;">Hóa đơn thanh toán</h1>
+        <p style="color: var(--muted); margin-bottom: 24px;">Vui lòng kiểm tra lại thông tin đơn hàng trước khi tiến hành thanh toán.</p>
+
+        @if (Model.ErrorMessage != null)
+        {
+            <div class="alert alert-danger" role="alert" style="margin-bottom: 18px; font-size: 0.9rem; font-weight: 600;">
+                ⚠️ @Model.ErrorMessage
+            </div>
+        }
+
+        <div class="panel" style="padding: 20px; box-shadow: none; border: 1.5px solid var(--line); border-radius: var(--radius-md); background: #fafdfc; margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span style="font-weight: 700; color: var(--ink);">Gói dịch vụ</span>
+                <span style="font-weight: 800; color: var(--brand-primary);">@Model.Package.Name</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-top: 1px dashed var(--line); padding-top: 12px;">
+                <span style="color: var(--muted); font-weight: 600;">Tín dụng nhận được</span>
+                <span style="font-weight: 700; color: var(--ink);">🪙 @Model.Package.Credits Credits</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--line); padding-top: 12px; font-size: 1.15rem;">
+                <span style="font-weight: 700; color: var(--ink);">Tổng tiền toán</span>
+                <span style="font-weight: 800; color: var(--brand-primary);">@Model.Package.Price.ToString("N0") đ</span>
+            </div>
+        </div>
+
+        <form method="post" asp-page-handler="Pay">
+            <input type="hidden" name="packageId" value="@Model.Package.Id" />
+            
+            <div class="form-stack" style="margin-bottom: 28px;">
+                <label>Phương thức thanh toán</label>
+                <div class="course-check" style="border-color: var(--brand-primary); background: var(--brand-light); padding: 16px; gap: 12px;">
+                    <input type="radio" checked style="accent-color: var(--brand-primary); width: 18px; height: 18px;" />
+                    <span style="display: flex; flex-direction: column;">
+                        <strong style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--brand-primary);">Cổng thanh toán VNPAY (MOCK)</strong>
+                        <small style="margin-top: 2px; color: var(--muted);">Giả lập giao dịch trực tuyến qua cổng VNPay nhanh chóng.</small>
+                    </span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; height: 48px; border-radius: var(--radius-md); font-weight: 700; font-size: 0.95rem;">
+                Xác nhận & Thanh toán
+            </button>
+        </form>
+    </div>
+</div>
