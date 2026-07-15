@@ -14,6 +14,8 @@ public sealed class ChatBoxDbContext(DbContextOptions<ChatBoxDbContext> options)
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<BenchmarkRun> BenchmarkRuns => Set<BenchmarkRun>();
     public DbSet<BenchmarkResult> BenchmarkResults => Set<BenchmarkResult>();
+    public DbSet<BillingPackage> BillingPackages => Set<BillingPackage>();
+    public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -41,5 +43,9 @@ public sealed class ChatBoxDbContext(DbContextOptions<ChatBoxDbContext> options)
         model.Entity<BenchmarkRun>().HasOne(x => x.StartedBy).WithMany().HasForeignKey(x => x.StartedById).OnDelete(DeleteBehavior.Restrict);
         model.Entity<BenchmarkResult>().HasOne(x => x.Run).WithMany(x => x.Results).HasForeignKey(x => x.RunId).OnDelete(DeleteBehavior.Cascade);
         model.Entity<BenchmarkResult>().HasIndex(x => new { x.RunId, x.QuestionId });
+
+        model.Entity<PaymentTransaction>().HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        model.Entity<PaymentTransaction>().HasOne(x => x.Package).WithMany().HasForeignKey(x => x.PackageId).OnDelete(DeleteBehavior.Cascade);
+        model.Entity<PaymentTransaction>().HasIndex(x => x.TransactionNo).IsUnique();
     }
 }

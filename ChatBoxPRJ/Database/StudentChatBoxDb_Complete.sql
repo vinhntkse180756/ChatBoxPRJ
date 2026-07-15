@@ -49,10 +49,22 @@ BEGIN
         [Email] nvarchar(160) NOT NULL,
         [PasswordHash] nvarchar(500) NOT NULL,
         [Role] int NOT NULL,
+        [Credits] int NOT NULL
+            CONSTRAINT [DF_Users_Credits] DEFAULT (20),
         [CreatedAtUtc] datetime2 NOT NULL
             CONSTRAINT [DF_Users_CreatedAtUtc] DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT [PK_Users] PRIMARY KEY ([Id])
     );
+END;
+ELSE
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM sys.columns 
+        WHERE object_id = OBJECT_ID(N'[dbo].[Users]') AND name = N'Credits'
+    )
+    BEGIN
+        ALTER TABLE [dbo].[Users] ADD [Credits] INT NOT NULL CONSTRAINT [DF_Users_Credits] DEFAULT (20);
+    END;
 END;
 GO
 
@@ -85,6 +97,55 @@ BEGIN
             FOREIGN KEY ([LecturerId]) REFERENCES [dbo].[Users] ([Id]) ON DELETE CASCADE,
         CONSTRAINT [FK_LecturerCourses_Courses_CourseId]
             FOREIGN KEY ([CourseId]) REFERENCES [dbo].[Courses] ([Id]) ON DELETE CASCADE
+    );
+END;
+GO
+
+/* =========================
+   Billing & Payments tables
+   ========================= */
+
+IF OBJECT_ID(N'[dbo].[BillingPackages]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[BillingPackages]
+    (
+        [Id] uniqueidentifier NOT NULL
+            CONSTRAINT [DF_BillingPackages_Id] DEFAULT (NEWID()),
+        [Name] nvarchar(100) NOT NULL,
+        [Price] decimal(18, 2) NOT NULL,
+        [Credits] int NOT NULL,
+        [Description] nvarchar(500) NOT NULL,
+        CONSTRAINT [PK_BillingPackages] PRIMARY KEY ([Id])
+    );
+
+    -- Seed billing packages
+    INSERT INTO [dbo].[BillingPackages] ([Id], [Name], [Price], [Credits], [Description])
+    VALUES 
+    ('8F8BE968-3E2A-4D78-BC86-3AD5B4B27C11', N'Gói Tiêu Chuẩn', 10000.00, 20, N'Cung cấp thêm 20 lượt hỏi chatbot RAG để học tập.'),
+    ('8F8BE968-3E2A-4D78-BC86-3AD5B4B27C22', N'Gói Nâng Cao', 20000.00, 50, N'Cung cấp thêm 50 lượt hỏi chatbot RAG kèm ưu tiên xử lý.'),
+    ('8F8BE968-3E2A-4D78-BC86-3AD5B4B27C33', N'Gói Chuyên Gia', 50000.00, 150, N'Cung cấp thêm 150 lượt hỏi chatbot RAG. Phù hợp ôn thi cuối kỳ.');
+END;
+GO
+
+IF OBJECT_ID(N'[dbo].[PaymentTransactions]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[PaymentTransactions]
+    (
+        [Id] uniqueidentifier NOT NULL
+            CONSTRAINT [DF_PaymentTransactions_Id] DEFAULT (NEWID()),
+        [UserId] uniqueidentifier NOT NULL,
+        [PackageId] uniqueidentifier NOT NULL,
+        [Amount] decimal(18, 2) NOT NULL,
+        [Status] nvarchar(50) NOT NULL,
+        [PaymentGate] nvarchar(50) NOT NULL,
+        [TransactionNo] nvarchar(100) NOT NULL,
+        [CreatedAtUtc] datetime2 NOT NULL
+            CONSTRAINT [DF_PaymentTransactions_CreatedAtUtc] DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT [PK_PaymentTransactions] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_PaymentTransactions_Users_UserId]
+            FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users] ([Id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_PaymentTransactions_BillingPackages_PackageId]
+            FOREIGN KEY ([PackageId]) REFERENCES [dbo].[BillingPackages] ([Id]) ON DELETE CASCADE
     );
 END;
 GO

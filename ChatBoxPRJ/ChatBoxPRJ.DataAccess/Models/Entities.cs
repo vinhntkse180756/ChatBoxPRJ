@@ -15,6 +15,7 @@ public sealed class AppUser
     [MaxLength(160)] public string Email { get; set; } = "";
     [MaxLength(500)] public string PasswordHash { get; set; } = "";
     public UserRole Role { get; set; }
+    public int Credits { get; set; } = 20;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public ICollection<LecturerCourse> LecturerCourses { get; set; } = [];
 }
@@ -127,6 +128,29 @@ public sealed class BenchmarkResult
     public double TopScore { get; set; }
     public int CitationCount { get; set; }
     public string Answer { get; set; } = "";
+}
+
+public sealed class BillingPackage
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    [MaxLength(100)] public string Name { get; set; } = "";
+    public decimal Price { get; set; }
+    public int Credits { get; set; }
+    [MaxLength(500)] public string Description { get; set; } = "";
+}
+
+public sealed class PaymentTransaction
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid UserId { get; set; }
+    public AppUser User { get; set; } = null!;
+    public Guid PackageId { get; set; }
+    public BillingPackage Package { get; set; } = null!;
+    public decimal Amount { get; set; }
+    [MaxLength(50)] public string Status { get; set; } = "";
+    [MaxLength(50)] public string PaymentGate { get; set; } = "";
+    [MaxLength(100)] public string TransactionNo { get; set; } = "";
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
 
 public sealed record RetrievedChunk(
