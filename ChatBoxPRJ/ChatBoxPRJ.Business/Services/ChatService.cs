@@ -16,6 +16,7 @@ public sealed class ChatService(
     ICourseRepository courses,
     IDocumentRepository documents,
     IChatRepository chats,
+    IUserRepository users,
     IEmbeddingService embeddings,
     IVectorStore vectors,
     IAnswerGenerator answers,
@@ -65,6 +66,20 @@ public sealed class ChatService(
         var selectedDocument = await documents.FindAsync(documentId, ct);
         if (selectedDocument is null || selectedDocument.CourseId != courseId || selectedDocument.Status != DataDocumentStatus.Completed)
             return new("Vui lòng chọn một tài liệu đã lập chỉ mục trước khi đặt câu hỏi.", [], true);
+
+        // Ràng buộc số dư credits đối với sinh viên
+        if (role == BusinessUserRole.Student)
+        {
+            var user = await users.FindByIdAsync(userId, ct);
+            if (user is null)
+                return new("Tài khoản không tồn tại trên hệ thống.", [], true);
+            if (user.Credits <= 0)
+                return new("Bạn đã dùng hết lượt hỏi (0 credits). Vui lòng chọn 'Nạp Credit' để mua thêm gói dịch vụ.", [], true, conversationId);
+            
+            user.Credits--;
+            await users.UpdateAsync(user);
+        }
+
         var session = await chats.GetOrCreateSessionAsync(userId, courseId, ct);
         var activeConversationId = conversationId ?? Guid.NewGuid();
         var history = await chats.GetMessagesAsync(session.Id, activeConversationId, ct);
