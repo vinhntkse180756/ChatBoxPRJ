@@ -1,3 +1,12 @@
+@using ChatBoxPRJ.Infrastructure
+@inject ChatBoxPRJ.Business.Interfaces.IBillingService BillingService
+@{
+    int userCredits = 0;
+    if (User.Identity?.IsAuthenticated == true && User.IsInRole("Student"))
+    {
+        userCredits = await BillingService.GetUserCreditsAsync(User.UserId());
+    }
+}
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -13,7 +22,7 @@
 <header class="topbar"><a class="top-brand" asp-page="/Index"><span>S</span><b>StudySpace</b></a>
     <nav>
     @if (User.Identity?.IsAuthenticated == true) {
-        @if (User.IsInRole("Student")) { <a asp-page="/Student/Courses">Môn học</a><a asp-page="/Student/Chat">Hỏi đáp</a> }
+        @if (User.IsInRole("Student")) { <a asp-page="/Student/Courses">Môn học</a><a asp-page="/Student/Chat">Hỏi đáp</a><a asp-page="/Student/Packages" style="color: var(--brand-accent) !important; font-weight: 700;">Nạp Credit (🪙 @userCredits)</a> }
         @if (User.IsInRole("Admin")) { <a asp-page="/Admin/Index">Quản trị</a><a asp-page="/Admin/Reports">Báo cáo</a><a asp-page="/Admin/Benchmarks">Benchmark</a><a asp-page="/Admin/Assignments">Phân quyền</a> }
         @if (User.IsInRole("Lecturer")) { <a asp-page="/Lecturer/Documents">Tài liệu</a><a asp-page="/Student/Chat">Hỏi đáp</a> }
         <span class="user-chip"><i>@User.Identity.Name?.FirstOrDefault()</i>@User.Identity.Name</span>

@@ -1,0 +1,96 @@
+@page
+@model ChatBoxPRJ.Pages.Student.PackagesModel
+@{
+    ViewData["Title"] = "Gói Dịch Vụ & Credit";
+}
+
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">STORE</span>
+        <h1>Nạp Credit & Gói cước</h1>
+        <p>Mua thêm lượt câu hỏi để tiếp tục trò chuyện cùng các trợ lý học tập.</p>
+    </div>
+</div>
+
+<div class="student-course-layout">
+    <div class="student-course-grid" style="grid-template-columns: repeat(3, 1fr); grid-column: 1 / -1; gap: 24px; margin-bottom: 32px;">
+        @foreach (var p in Model.Packages)
+        {
+            <div class="student-course-card text-center" style="align-items: center; text-align: center;">
+                <div class="student-course-code" style="font-size: 1.1rem; padding: 10px 20px; border-radius: 12px; background: var(--brand-light); color: var(--brand-primary); margin-bottom: 16px;">
+                    🪙 @p.Credits Credits
+                </div>
+                <h2>@p.Name</h2>
+                <p style="min-height: 50px;">@p.Description</p>
+                <div style="font-size: 1.6rem; font-weight: 800; color: var(--brand-primary); margin-bottom: 20px;">
+                    @p.Price.ToString("N0") đ
+                </div>
+                <a class="btn btn-primary student-chat-link" style="margin-top: auto; display: inline-flex;" asp-page="/Student/Checkout" asp-route-packageId="@p.Id">
+                    Mua ngay
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="panel grow" style="width: 100%; margin-top: 24px;">
+    <div class="panel-title">
+        <div>
+            <h2>Lịch sử giao dịch</h2>
+            <p>Danh sách các hóa đơn nạp credit của bạn</p>
+        </div>
+        <div class="count-pill">Số dư: 🪙 @Model.CurrentCredits Credits</div>
+    </div>
+    
+    @if (!Model.Transactions.Any())
+    {
+        <div class="empty-state compact">
+            <span>🧾</span>
+            <h2>Chưa có giao dịch</h2>
+            <p>Bạn chưa thực hiện giao dịch nạp credit nào.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Mã giao dịch</th>
+                        <th>Gói cước</th>
+                        <th>Số tiền</th>
+                        <th>Cổng thanh toán</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày tạo (UTC+7)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in Model.Transactions)
+                    {
+                        <tr>
+                            <td><code style="font-weight: 700; color: var(--brand-primary);">@t.TransactionNo</code></td>
+                            <td><b>@t.PackageName</b></td>
+                            <td><b>@t.Amount.ToString("N0") đ</b></td>
+                            <td><span style="font-size: 0.8rem; color: var(--muted);">@t.PaymentGate</span></td>
+                            <td>
+                                @if (t.Status == "Completed")
+                                {
+                                    <span class="status completed">Thành công</span>
+                                }
+                                else if (t.Status == "Pending")
+                                {
+                                    <span class="status processing">Chờ xử lý</span>
+                                }
+                                else
+                                {
+                                    <span class="status failed">Thất bại</span>
+                                }
+                            </td>
+                            <td>@t.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
