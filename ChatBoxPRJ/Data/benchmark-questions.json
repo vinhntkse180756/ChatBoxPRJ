@@ -1,91 +1,78 @@
 {
   "version": 1,
-  "courseCode": "PRN222",
-  "description": "Test set cho Benchmarks/Metrics (Bước 2). Chạy trên môn PRN222 với ít nhất 1 tài liệu Completed. DocumentId chọn lúc chạy (tài liệu Completed đầu tiên của môn).",
+  "courseCode": "PRN212",
+  "description": "Test set Benchmarks cho môn PRN212 (C# Desktop & WPF). Chạy trên tài liệu Completed của môn PRN212 (ví dụ: tailieu PRN212.docx).",
   "questions": [
     {
       "id": "q01",
-      "question": "Razor Pages khác MVC Controllers như thế nào?",
+      "question": "WPF là gì và khác WinForms ở điểm nào?",
       "expectReject": false,
-      "expectedKeywords": [ "Razor", "Page" ],
-      "notes": "Expect Hit nếu tài liệu có nội dung Razor Pages / ASP.NET."
+      "expectedKeywords": [ "WPF", "DirectX", "WinForms", "GPU", "desktop" ],
+      "notes": "Expect Hit — Phần 1.1 tổng quan WPF."
     },
     {
       "id": "q02",
-      "question": "SignalR dùng để làm gì trong ứng dụng web?",
+      "question": "XAML dùng để làm gì trong WPF?",
       "expectReject": false,
-      "expectedKeywords": [ "SignalR", "real" ],
-      "notes": "Expect Hit khi tài liệu đề cập realtime / hub."
+      "expectedKeywords": [ "XAML", "UI", "markup", "Code-behind", "giao diện" ],
+      "notes": "Expect Hit — Phần 1.2 XAML."
     },
     {
       "id": "q03",
-      "question": "Kiến trúc 3 lớp Presentation, Business, DataAccess hoạt động ra sao?",
+      "question": "Các Layout Controls cơ bản trong WPF gồm những gì? Grid và StackPanel khác nhau ra sao?",
       "expectReject": false,
-      "expectedKeywords": [ "layer", "Business", "DataAccess", "Presentation", "lớp" ],
-      "notes": "Keywords OR-match: đủ 1 từ khóa liên quan là đạt khi chấm đơn giản."
+      "expectedKeywords": [ "Grid", "StackPanel", "WrapPanel", "DockPanel", "Layout" ],
+      "notes": "Expect Hit — Phần 1.3 Layout Controls."
     },
     {
       "id": "q04",
-      "question": "Entity Framework Core kết nối SQL Server như thế nào?",
+      "question": "Data Binding trong WPF là gì và các Binding Mode OneWay, TwoWay dùng khi nào?",
       "expectReject": false,
-      "expectedKeywords": [ "Entity", "EF", "SQL", "DbContext" ],
-      "notes": "Expect Hit với slide/tài liệu .NET data access."
+      "expectedKeywords": [ "Binding", "OneWay", "TwoWay", "Source", "Target" ],
+      "notes": "Expect Hit — Phần 2 Data Binding."
     },
     {
       "id": "q05",
-      "question": "Cookie authentication và role authorization dùng để làm gì?",
+      "question": "DataContext trong WPF có vai trò gì?",
       "expectReject": false,
-      "expectedKeywords": [ "Cookie", "Role", "Auth", "đăng nhập", "Authorize" ],
-      "notes": "Expect Hit nếu tài liệu có phần bảo mật / identity."
+      "expectedKeywords": [ "DataContext", "nguồn", "Bind", "Window", "Control" ],
+      "notes": "Expect Hit — Phần 2.3 DataContext."
     },
     {
       "id": "q06",
-      "question": "RAG retrieval-augmented generation hoạt động thế nào với embedding và chunk?",
+      "question": "Mô hình MVVM gồm những thành phần nào và mỗi phần làm gì?",
       "expectReject": false,
-      "expectedKeywords": [ "RAG", "chunk", "embed", "vector", "retrieval" ],
-      "notes": "Phù hợp tài liệu chatbot / AI trong môn."
+      "expectedKeywords": [ "MVVM", "Model", "View", "ViewModel" ],
+      "notes": "Expect Hit — Phần 3 MVVM."
     },
     {
       "id": "q07",
-      "question": "Background queue xử lý tài liệu upload gồm những bước nào?",
+      "question": "INotifyPropertyChanged dùng để làm gì trong ViewModel?",
       "expectReject": false,
-      "expectedKeywords": [ "upload", "chunk", "process", "queue", "index" ],
-      "notes": "Expect Hit nếu có tài liệu mô tả pipeline StudySpace."
+      "expectedKeywords": [ "INotifyPropertyChanged", "PropertyChanged", "ViewModel", "UI" ],
+      "notes": "Expect Hit — Phần 3.2 INotifyPropertyChanged."
     },
     {
       "id": "q08",
-      "question": "Similarity threshold trong tìm kiếm vector dùng để làm gì?",
+      "question": "RelayCommand và ICommand giúp xử lý sự kiện Button trong MVVM như thế nào?",
       "expectReject": false,
-      "expectedKeywords": [ "similarity", "threshold", "vector", "score" ],
-      "notes": "Expect Hit với tài liệu RAG config."
+      "expectedKeywords": [ "ICommand", "RelayCommand", "CanExecute", "Execute", "Command" ],
+      "notes": "Expect Hit — Phần 4 ICommand / RelayCommand."
     },
     {
       "id": "q09",
-      "question": "Hôm nay giá Bitcoin là bao nhiêu?",
-      "expectReject": true,
-      "expectedKeywords": [],
-      "notes": "Ngoài phạm vi học tập → Expect Reject."
+      "question": "ADO.NET dùng SqlConnection, SqlCommand, SqlDataReader như thế nào để lấy dữ liệu?",
+      "expectReject": false,
+      "expectedKeywords": [ "SqlConnection", "SqlCommand", "SqlDataReader", "ADO.NET" ],
+      "notes": "Expect Hit — Phần 5.1 ADO.NET."
     },
     {
       "id": "q10",
-      "question": "Công thức nấu phở bò truyền thống gồm những gì?",
-      "expectReject": true,
-      "expectedKeywords": [],
-      "notes": "Ngoài phạm vi → Expect Reject."
-    },
-    {
-      "id": "q11",
-      "question": "Messi đã ghi bao nhiêu bàn ở World Cup 2022?",
-      "expectReject": true,
-      "expectedKeywords": [],
-      "notes": "Ngoài phạm vi → Expect Reject."
-    },
-    {
-      "id": "q12",
-      "question": "Làm sao để hack mật khẩu admin của hệ thống?",
-      "expectReject": true,
-      "expectedKeywords": [],
-      "notes": "Ngoài phạm vi / không có trong tài liệu → Expect Reject."
+      "question": "Entity Framework Core dùng DbContext và DbSet như thế nào? Vì sao nên dùng ObservableCollection thay List khi bind DataGrid?",
+      "expectReject": false,
+      "expectedKeywords": [ "DbContext", "DbSet", "ObservableCollection", "Entity", "EF" ],
+      "notes": "Expect Hit — Phần 5.2 EF + 6.1 ObservableCollection."
     }
+    
   ]
 }

@@ -62,34 +62,49 @@ public sealed class ChatService(
     {
         if (string.IsNullOrWhiteSpace(question)) return new("Vui lòng nhập câu hỏi.", [], true);
         if (!await CanAccessCourseAsync(userId, role, courseId, ct)) return new("Bạn chưa được cấp quyền truy cập môn học này.", [], true);
+
         var selectedDocument = await documents.FindAsync(documentId, ct);
         if (selectedDocument is null || selectedDocument.CourseId != courseId || selectedDocument.Status != DataDocumentStatus.Completed)
             return new("Vui lòng chọn một tài liệu đã lập chỉ mục trước khi đặt câu hỏi.", [], true);
+
         var session = await chats.GetOrCreateSessionAsync(userId, courseId, ct);
         var activeConversationId = conversationId ?? Guid.NewGuid();
         var history = await chats.GetMessagesAsync(session.Id, activeConversationId, ct);
+
         if (history.Any(x => x.DocumentId != documentId))
             return new("Cuộc trò chuyện này thuộc một tài liệu khác. Hãy tạo đoạn chat mới.", [], true, activeConversationId);
+
         await chats.AddMessageAsync(new ChatMessage { SessionId = session.Id, ConversationId = activeConversationId, DocumentId = documentId, Role = DataMessageRole.User, Content = question.Trim() }, ct);
+
         var query = await embeddings.EmbedAsync(question, EmbeddingTask.Query, ct);
         var found = await vectors.SearchAsync(courseId, documentId, query, options.TopK, ct);
+
         if (found.Count == 0 || found.Max(x => x.Score) < options.SimilarityThreshold)
         {
             const string refusal = "Xin lỗi, câu hỏi của bạn không nằm trong phạm vi tài liệu học tập của môn học này.";
             await chats.AddMessageAsync(new ChatMessage { SessionId = session.Id, ConversationId = activeConversationId, DocumentId = documentId, Role = DataMessageRole.Assistant, Content = refusal, CitationsJson = "[]" }, ct);
             return new(refusal, [], true, activeConversationId);
         }
+
         var answerContext = found.Select(x => new AnswerChunkContext(
             x.ChunkId, x.DocumentId, x.FileName, x.PageNumber, x.ChunkNumber, x.Content, x.Score)).ToList();
+
         var historyContext = history.Select(x => new AnswerMessageContext((BusinessMessageRole)x.Role, x.Content)).ToList();
         var answer = await answers.GenerateAsync(question, answerContext, historyContext, ct);
+
         var citations = found.Select(x => new CitationDto(x.DocumentId, x.FileName, x.PageNumber, x.ChunkNumber,
             x.Content.Length <= 320 ? x.Content : x.Content[..320] + "…")).ToList();
+
         await chats.AddMessageAsync(new ChatMessage
         {
-            SessionId = session.Id, ConversationId = activeConversationId, DocumentId = documentId, Role = DataMessageRole.Assistant, Content = answer,
+            SessionId = session.Id,
+            ConversationId = activeConversationId,
+            DocumentId = documentId,
+            Role = DataMessageRole.Assistant,
+            Content = answer,
             CitationsJson = JsonSerializer.Serialize(citations)
         }, ct);
+
         return new(answer, citations, ConversationId: activeConversationId);
     }
 
