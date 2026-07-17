@@ -1,0 +1,42 @@
+@page
+@model ChatBoxPRJ.Pages.Payments.ResultModel
+@{
+    ViewData["Title"] = Model.Success ? "Thanh toán thành công" : "Thanh toán thất bại";
+}
+<section class="payment-result @(Model.Success ? "ok" : "fail")">
+    <div class="payment-result-card">
+        <div class="payment-result-icon">@(Model.Success ? "✓" : "!")</div>
+        <h1>@(Model.Success ? "Thanh toán thành công" : "Thanh toán thất bại")</h1>
+        <p class="payment-result-msg">@Model.DisplayMessage</p>
+
+        @if (Model.Result is { } r)
+        {
+            <dl class="payment-result-meta">
+                <div><dt>Mã đơn</dt><dd>@r.OrderCode</dd></div>
+                <div><dt>Gói</dt><dd>@r.PackageName</dd></div>
+                <div><dt>Số tiền</dt><dd>@r.AmountVnd.ToString("N0")đ</dd></div>
+                @if (r.Success)
+                {
+                    <div><dt>Hạn mức</dt><dd>@r.QuestionsPerDay.ToString("N0") câu/ngày</dd></div>
+                    @if (r.EndsAtUtc is { } ends)
+                    {
+                        <div><dt>Hết hạn</dt><dd>@ends.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd></div>
+                    }
+                }
+            </dl>
+        }
+
+        <div class="payment-result-actions">
+            @if (Model.Success)
+            {
+                <a class="btn btn-primary" asp-page="/Student/Chat">Bắt đầu hỏi đáp</a>
+                <a class="btn btn-outline-secondary" asp-page="/Student/Upgrade">Xem gói của tôi</a>
+            }
+            else
+            {
+                <a class="btn btn-primary" asp-page="/Student/Upgrade">Thử thanh toán lại</a>
+                <a class="btn btn-outline-secondary" asp-page="/Student/Chat">Về hỏi đáp</a>
+            }
+        </div>
+    </div>
+</section>

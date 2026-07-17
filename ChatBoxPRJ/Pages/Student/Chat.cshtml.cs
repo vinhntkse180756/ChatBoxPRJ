@@ -21,6 +21,11 @@ public sealed class ChatModel(ICourseService courses, IChatService chat, IDocume
     {
         if (!CourseId.HasValue || !DocumentId.HasValue) return RedirectToPage(new { courseId = CourseId });
         var result = await chat.AskAsync(User.UserId(), User.UserRole(), CourseId.Value, ConversationId, DocumentId.Value, Question, HttpContext.RequestAborted);
+        if (result.Rejected && result.ConversationId is null)
+        {
+            Flash = result.Answer;
+            FlashType = "danger";
+        }
         return RedirectToPage(new { courseId = CourseId, documentId = DocumentId, conversationId = result.ConversationId ?? ConversationId });
     }
 

@@ -359,6 +359,182 @@ namespace ChatBoxPRJ.DataAccess.Migrations
                     b.ToTable("LecturerCourses");
                 });
 
+            modelBuilder.Entity("ChatBoxPRJ.DataAccess.Models.StudentDailyTokenUsage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("TokensUsed")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly>("UsageDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "UsageDate")
+                        .IsUnique();
+
+                    b.ToTable("StudentDailyTokenUsages");
+                });
+
+            modelBuilder.Entity("ChatBoxPRJ.DataAccess.Models.SubscriptionPackage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ChatQuestionsPerDay")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DailyTokenLimit")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("DurationDays")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MaxQuestionChars")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<decimal>("PriceVnd")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Packages");
+                });
+
+            modelBuilder.Entity("ChatBoxPRJ.DataAccess.Models.PaymentOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("AmountVnd")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("OrderCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("PaidAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("ProviderResponseCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("ProviderTransactionNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("ProviderReference");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderCode")
+                        .IsUnique();
+
+                    b.HasIndex("PackageId");
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.ToTable("Payments");
+                });
+
+            modelBuilder.Entity("ChatBoxPRJ.DataAccess.Models.UserSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("EndsAtUtc")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("ExpiresAtUtc");
+
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("PaymentOrderId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("PaymentId");
+
+                    b.Property<DateTime>("StartsAtUtc")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("StartedAtUtc");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PackageId");
+
+                    b.HasIndex("PaymentOrderId");
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.ToTable("UserSubscriptions");
+                });
+
             modelBuilder.Entity("ChatBoxPRJ.DataAccess.Models.BenchmarkResult", b =>
                 {
                     b.HasOne("ChatBoxPRJ.DataAccess.Models.BenchmarkRun", "Run")
@@ -425,6 +601,62 @@ namespace ChatBoxPRJ.DataAccess.Migrations
                     b.Navigation("Course");
 
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("ChatBoxPRJ.DataAccess.Models.StudentDailyTokenUsage", b =>
+                {
+                    b.HasOne("ChatBoxPRJ.DataAccess.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ChatBoxPRJ.DataAccess.Models.PaymentOrder", b =>
+                {
+                    b.HasOne("ChatBoxPRJ.DataAccess.Models.SubscriptionPackage", "Package")
+                        .WithMany()
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ChatBoxPRJ.DataAccess.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Package");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ChatBoxPRJ.DataAccess.Models.UserSubscription", b =>
+                {
+                    b.HasOne("ChatBoxPRJ.DataAccess.Models.SubscriptionPackage", "Package")
+                        .WithMany()
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ChatBoxPRJ.DataAccess.Models.PaymentOrder", "PaymentOrder")
+                        .WithMany()
+                        .HasForeignKey("PaymentOrderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ChatBoxPRJ.DataAccess.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Package");
+
+                    b.Navigation("PaymentOrder");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ChatBoxPRJ.DataAccess.Models.DocumentChunk", b =>

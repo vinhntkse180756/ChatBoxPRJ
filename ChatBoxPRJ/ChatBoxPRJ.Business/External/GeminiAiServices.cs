@@ -28,12 +28,20 @@ public sealed class GeminiEmbeddingService(AiOptions options) : IEmbeddingServic
         return json.RootElement.GetProperty("embedding").GetProperty("values").EnumerateArray().Select(x => x.GetSingle()).ToArray();
     }
 
-    private static string BuildApiError(string service, string model, System.Net.HttpStatusCode status, string body)
+    internal static string BuildApiError(string service, string model, System.Net.HttpStatusCode status, string body)
     {
+        if (status == System.Net.HttpStatusCode.TooManyRequests)
+            return "Gemini đang bị giới hạn quota/rate limit (HTTP 429). Vui lòng đợi khoảng 1 phút rồi thử lại, hoặc dùng API key có billing / chuyển tạm sang AI:Provider = Local.";
+
         try
         {
             using var json = JsonDocument.Parse(body);
             var message = json.RootElement.GetProperty("error").GetProperty("message").GetString();
+            if (!string.IsNullOrWhiteSpace(message) &&
+                (message.Contains("quota", StringComparison.OrdinalIgnoreCase)
+                 || message.Contains("rate limit", StringComparison.OrdinalIgnoreCase)))
+                return "Gemini đã hết hạn mức free tier. Hãy đợi reset quota, bật billing trên Google AI Studio, hoặc tạm đặt AI:Provider = \"Local\" trong appsettings.json.";
+
             return $"{service} ({model}) trả về HTTP {(int)status}: {message}";
         }
         catch
@@ -81,24 +89,10 @@ public sealed class GeminiAnswerGenerator(AiOptions options) : IAnswerGenerator
             ct);
         var responseBody = await response.Content.ReadAsStringAsync(ct);
         if (!response.IsSuccessStatusCode)
-            throw new InvalidOperationException(BuildApiError("Gemini Chat", model, response.StatusCode, responseBody));
+            throw new InvalidOperationException(GeminiEmbeddingService.BuildApiError("Gemini Chat", model, response.StatusCode, responseBody));
         using var json = JsonDocument.Parse(responseBody);
         return json.RootElement.GetProperty("candidates")[0].GetProperty("content").GetProperty("parts")[0]
                    .GetProperty("text").GetString()
                ?? "Không tạo được câu trả lời.";
-    }
-
-    private static string BuildApiError(string service, string model, System.Net.HttpStatusCode status, string body)
-    {
-        try
-        {
-            using var json = JsonDocument.Parse(body);
-            var message = json.RootElement.GetProperty("error").GetProperty("message").GetString();
-            return $"{service} ({model}) trả về HTTP {(int)status}: {message}";
-        }
-        catch
-        {
-            return $"{service} ({model}) trả về HTTP {(int)status}: {body[..Math.Min(body.Length, 500)]}";
-        }
     }
 }

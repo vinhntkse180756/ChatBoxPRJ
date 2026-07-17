@@ -44,7 +44,6 @@ public static class BenchmarkScope
     public static bool IsReject(bool rejected) => rejected;
 
     // ----- Ngoài scope (không làm trong flow này) -----
-    // - Packages + Payments
     // - UI Student/Lecturer cho benchmark
     // - Precision@k thủ công với label chuyên gia
     // - A/B nhiều model song song

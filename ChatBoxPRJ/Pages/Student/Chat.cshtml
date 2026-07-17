@@ -11,14 +11,28 @@
 @if (Model.Workspace is null) { <div class="empty-state"><span>📚</span><h1>Chưa có môn học</h1><p>@(User.IsInRole("Lecturer") ? "Bạn chưa được quản trị viên cấp quyền môn học nào." : "Quản trị viên cần tạo ít nhất một môn trước khi bắt đầu.")</p></div> }
 else {
 @if (Model.Flash is not null) { <div class="chat-flash alert alert-@(Model.FlashType ?? "info")" role="alert">@Model.Flash</div> }
-<header class="chat-header"><div><span class="course-badge">@Model.Workspace.Course.Code</span><h1>@Model.Workspace.Course.Name</h1><p>@Model.Workspace.Course.Description</p></div><div class="knowledge-count"><b>@Model.Workspace.Documents.Count</b><span>tài liệu đã index</span></div></header>
+<header class="chat-header"><div><span class="course-badge">@Model.Workspace.Course.Code</span><h1>@Model.Workspace.Course.Name</h1><p>@Model.Workspace.Course.Description</p></div>
+<div class="chat-header-meta">
+@if (Model.Workspace.TokenQuota is { Enabled: true } quota)
+{
+    <div class="token-quota @(quota.Remaining == 0 ? "exhausted" : "")" title="Số câu hỏi còn lại hôm nay theo gói @quota.PackageName">
+        <b>@quota.Remaining.ToString("N0")</b>
+        <span>@quota.PackageName · câu còn lại / @quota.DailyLimit.ToString("N0")</span>
+        @if (quota.PackageCode != "PRE")
+        {
+            <a class="quota-upgrade" asp-page="/Student/Upgrade">Nâng cấp</a>
+        }
+    </div>
+}
+<div class="knowledge-count"><b>@Model.Workspace.Documents.Count</b><span>tài liệu đã index</span></div>
+</div></header>
 <section class="chat-scroll" id="chatScroll">
     @if (!Model.Workspace.Messages.Any()) { <div class="welcome-message"><div class="bot-orb">✦</div><h2>Bắt đầu hỏi về @Model.Workspace.Course.Code</h2><p>Mình chỉ trả lời từ tài liệu đã được giảng viên cung cấp và luôn kèm nguồn để bạn kiểm chứng.</p><div class="suggestions"><button type="button">Tóm tắt nội dung chính của môn học</button><button type="button">Giải thích một khái niệm trong tài liệu</button></div></div> }
     @foreach (var m in Model.Workspace.Messages) { <article class="message @(m.Role == MessageRole.User ? "user" : "assistant")"><div class="message-avatar">@(m.Role == MessageRole.User ? userAvatar : "✦")</div><div class="bubble"><div class="message-label">@(m.Role == MessageRole.User ? "Bạn" : "Trợ lý học tập")</div><div class="message-text">@m.Content</div>
         @if (m.Citations.Any()) { <div class="citations"><b>Nguồn trích dẫn tài liệu</b>@foreach (var c in m.Citations) { <details><summary><span>📎 @c.FileName</span><small>Trang @c.PageNumber · Đoạn @c.ChunkNumber</small></summary><p>@c.Excerpt</p></details> }</div> }
     </div></article> }
 </section>
-<footer class="composer">@if (Model.CanChat) { <form method="post" asp-page-handler="Ask" id="chatForm"><input type="hidden" asp-for="CourseId"/><input type="hidden" asp-for="DocumentId"/><input type="hidden" asp-for="ConversationId"/><textarea asp-for="Question" rows="1" placeholder="Đặt câu hỏi trong tài liệu đã chọn…" required></textarea><button title="Gửi câu hỏi">➤</button></form><small>Trợ lý chỉ tìm kiếm trong tài liệu đang chọn.</small> } else if (Model.DocumentId.HasValue) { <div class="select-document-notice">Tài liệu nguồn đã bị xóa. Bạn vẫn có thể xem hoặc xóa lịch sử này.</div> } else { <div class="select-document-notice">← Hãy chọn một tài liệu nguồn trước khi chat</div> }</footer>
+<footer class="composer">@if (Model.CanChat && Model.Workspace.TokenQuota is { Enabled: true, Remaining: 0 }) { <div class="select-document-notice">Bạn đã hết hạn mức câu hỏi hôm nay. <a asp-page="/Student/Upgrade">Nâng cấp gói</a> hoặc quay lại vào ngày mai.</div> } else if (Model.CanChat) { <form method="post" asp-page-handler="Ask" id="chatForm"><input type="hidden" asp-for="CourseId"/><input type="hidden" asp-for="DocumentId"/><input type="hidden" asp-for="ConversationId"/><textarea asp-for="Question" rows="1" placeholder="Đặt câu hỏi trong tài liệu đã chọn…" required maxlength="@(Model.Workspace.TokenQuota?.MaxQuestionChars ?? 8000)"></textarea><button title="Gửi câu hỏi">➤</button></form><small>Trợ lý chỉ tìm kiếm trong tài liệu đang chọn.</small> } else if (Model.DocumentId.HasValue) { <div class="select-document-notice">Tài liệu nguồn đã bị xóa. Bạn vẫn có thể xem hoặc xóa lịch sử này.</div> } else { <div class="select-document-notice">← Hãy chọn một tài liệu nguồn trước khi chat</div> }</footer>
 }
 </main>
 <aside class="document-sidebar">

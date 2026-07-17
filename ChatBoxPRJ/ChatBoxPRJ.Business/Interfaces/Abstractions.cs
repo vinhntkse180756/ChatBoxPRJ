@@ -81,3 +81,17 @@ public interface IBenchmarkService
     Task<BenchmarkRunDto?> GetRunAsync(Guid runId, CancellationToken ct = default);
     Task<IReadOnlyList<BenchmarkRunSummaryDto>> ListRecentAsync(int take = 20, CancellationToken ct = default);
 }
+
+public interface ISubscriptionService
+{
+    Task<IReadOnlyList<SubscriptionPackageDto>> ListPackagesAsync(Guid userId, CancellationToken ct = default);
+    Task<StudentSubscriptionDto> GetEffectiveSubscriptionAsync(Guid userId, CancellationToken ct = default);
+    Task<(int QuestionsPerDay, int MaxQuestionChars, string PackageCode, string PackageName)> ResolveLimitsAsync(Guid userId, CancellationToken ct = default);
+    Task<CreatePaymentResult> StartCheckoutAsync(Guid userId, Guid packageId, string clientIp, string returnUrl, CancellationToken ct = default);
+    Task<PaymentCallbackResult> CompleteVnPayReturnAsync(IReadOnlyDictionary<string, string> query, CancellationToken ct = default);
+    Task<PaymentCallbackResult> CompleteVnPayIpnAsync(IReadOnlyDictionary<string, string> query, CancellationToken ct = default);
+    Task<PaymentResultDto?> GetPaymentResultAsync(string orderCode, CancellationToken ct = default);
+    Task<(bool Success, string Message)> DowngradeToFreeAsync(Guid userId, CancellationToken ct = default);
+    Task<AdminStudentsDashboardDto> GetAdminStudentsDashboardAsync(CancellationToken ct = default);
+    Task<(bool Success, string Message)> GrantPackageAsync(Guid studentId, string packageCode, CancellationToken ct = default);
+}

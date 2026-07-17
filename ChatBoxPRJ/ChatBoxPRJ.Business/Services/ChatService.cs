@@ -16,10 +16,13 @@ public sealed class ChatService(
     ICourseRepository courses,
     IDocumentRepository documents,
     IChatRepository chats,
+    IStudentTokenUsageRepository tokenUsage,
+    ISubscriptionService subscriptions,
     IEmbeddingService embeddings,
     IVectorStore vectors,
     IAnswerGenerator answers,
     RagOptions options,
+    StudentUsageOptions studentUsage,
     IMapper mapper) : IChatService
 {
     public async Task<ChatWorkspaceDto?> OpenWorkspaceAsync(Guid userId, BusinessUserRole role, Guid courseId, Guid? conversationId = null, CancellationToken ct = default)
@@ -55,13 +58,34 @@ public sealed class ChatService(
         var messages = conversationId.HasValue
             ? (await chats.GetMessagesAsync(session.Id, conversationId, ct)).Select(MapMessage).ToList()
             : [];
-        return new ChatWorkspaceDto(mapper.Map<CourseDto>(course), session.Id, docs, histories, messages);
+        var quota = role == BusinessUserRole.Student
+            ? await BuildQuotaAsync(userId, ct)
+            : null;
+        return new ChatWorkspaceDto(mapper.Map<CourseDto>(course), session.Id, docs, histories, messages, quota);
     }
 
     public async Task<ChatAnswer> AskAsync(Guid userId, BusinessUserRole role, Guid courseId, Guid? conversationId, Guid documentId, string question, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(question)) return new("Vui lòng nhập câu hỏi.", [], true);
         if (!await CanAccessCourseAsync(userId, role, courseId, ct)) return new("Bạn chưa được cấp quyền truy cập môn học này.", [], true);
+
+        var trimmedQuestion = question.Trim();
+        int dailyLimit = 0;
+        int maxChars = studentUsage.MaxQuestionChars;
+        if (role == BusinessUserRole.Student && studentUsage.Enabled)
+        {
+            var limits = await subscriptions.ResolveLimitsAsync(userId, ct);
+            dailyLimit = limits.QuestionsPerDay;
+            maxChars = limits.MaxQuestionChars;
+
+            if (trimmedQuestion.Length > maxChars)
+                return new($"Câu hỏi tối đa {maxChars} ký tự. Hiện tại: {trimmedQuestion.Length}.", [], true);
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var used = await tokenUsage.GetUsedTokensAsync(userId, today, ct);
+            if (used >= dailyLimit)
+                return new($"Bạn đã hết hạn mức {dailyLimit:N0} câu hỏi hôm nay (gói {limits.PackageName}). Hãy nâng cấp gói hoặc quay lại ngày mai.", [], true);
+        }
 
         var selectedDocument = await documents.FindAsync(documentId, ct);
         if (selectedDocument is null || selectedDocument.CourseId != courseId || selectedDocument.Status != DataDocumentStatus.Completed)
@@ -74,38 +98,59 @@ public sealed class ChatService(
         if (history.Any(x => x.DocumentId != documentId))
             return new("Cuộc trò chuyện này thuộc một tài liệu khác. Hãy tạo đoạn chat mới.", [], true, activeConversationId);
 
-        await chats.AddMessageAsync(new ChatMessage { SessionId = session.Id, ConversationId = activeConversationId, DocumentId = documentId, Role = DataMessageRole.User, Content = question.Trim() }, ct);
+        await chats.AddMessageAsync(new ChatMessage { SessionId = session.Id, ConversationId = activeConversationId, DocumentId = documentId, Role = DataMessageRole.User, Content = trimmedQuestion }, ct);
 
-        var query = await embeddings.EmbedAsync(question, EmbeddingTask.Query, ct);
-        var found = await vectors.SearchAsync(courseId, documentId, query, options.TopK, ct);
-
-        if (found.Count == 0 || found.Max(x => x.Score) < options.SimilarityThreshold)
+        try
         {
-            const string refusal = "Xin lỗi, câu hỏi của bạn không nằm trong phạm vi tài liệu học tập của môn học này.";
-            await chats.AddMessageAsync(new ChatMessage { SessionId = session.Id, ConversationId = activeConversationId, DocumentId = documentId, Role = DataMessageRole.Assistant, Content = refusal, CitationsJson = "[]" }, ct);
-            return new(refusal, [], true, activeConversationId);
+            var query = await embeddings.EmbedAsync(trimmedQuestion, EmbeddingTask.Query, ct);
+            var found = await vectors.SearchAsync(courseId, documentId, query, options.TopK, ct);
+
+            if (found.Count == 0 || found.Max(x => x.Score) < options.SimilarityThreshold)
+            {
+                const string refusal = "Xin lỗi, câu hỏi của bạn không nằm trong phạm vi tài liệu học tập của môn học này.";
+                await chats.AddMessageAsync(new ChatMessage { SessionId = session.Id, ConversationId = activeConversationId, DocumentId = documentId, Role = DataMessageRole.Assistant, Content = refusal, CitationsJson = "[]" }, ct);
+                await ChargeStudentQuestionAsync(userId, role, ct);
+                return new(refusal, [], true, activeConversationId);
+            }
+
+            var answerContext = found.Select(x => new AnswerChunkContext(
+                x.ChunkId, x.DocumentId, x.FileName, x.PageNumber, x.ChunkNumber, x.Content, x.Score)).ToList();
+
+            var historyContext = history.Select(x => new AnswerMessageContext((BusinessMessageRole)x.Role, x.Content)).ToList();
+            var answer = await answers.GenerateAsync(trimmedQuestion, answerContext, historyContext, ct);
+
+            var citations = found.Select(x => new CitationDto(x.DocumentId, x.FileName, x.PageNumber, x.ChunkNumber,
+                x.Content.Length <= 320 ? x.Content : x.Content[..320] + "…")).ToList();
+
+            await chats.AddMessageAsync(new ChatMessage
+            {
+                SessionId = session.Id,
+                ConversationId = activeConversationId,
+                DocumentId = documentId,
+                Role = DataMessageRole.Assistant,
+                Content = answer,
+                CitationsJson = JsonSerializer.Serialize(citations)
+            }, ct);
+
+            await ChargeStudentQuestionAsync(userId, role, ct);
+            return new(answer, citations, ConversationId: activeConversationId);
         }
-
-        var answerContext = found.Select(x => new AnswerChunkContext(
-            x.ChunkId, x.DocumentId, x.FileName, x.PageNumber, x.ChunkNumber, x.Content, x.Score)).ToList();
-
-        var historyContext = history.Select(x => new AnswerMessageContext((BusinessMessageRole)x.Role, x.Content)).ToList();
-        var answer = await answers.GenerateAsync(question, answerContext, historyContext, ct);
-
-        var citations = found.Select(x => new CitationDto(x.DocumentId, x.FileName, x.PageNumber, x.ChunkNumber,
-            x.Content.Length <= 320 ? x.Content : x.Content[..320] + "…")).ToList();
-
-        await chats.AddMessageAsync(new ChatMessage
+        catch (InvalidOperationException ex)
         {
-            SessionId = session.Id,
-            ConversationId = activeConversationId,
-            DocumentId = documentId,
-            Role = DataMessageRole.Assistant,
-            Content = answer,
-            CitationsJson = JsonSerializer.Serialize(citations)
-        }, ct);
-
-        return new(answer, citations, ConversationId: activeConversationId);
+            var error = string.IsNullOrWhiteSpace(ex.Message)
+                ? "Hệ thống AI tạm thời không phản hồi. Vui lòng thử lại sau."
+                : ex.Message;
+            await chats.AddMessageAsync(new ChatMessage
+            {
+                SessionId = session.Id,
+                ConversationId = activeConversationId,
+                DocumentId = documentId,
+                Role = DataMessageRole.Assistant,
+                Content = error,
+                CitationsJson = "[]"
+            }, ct);
+            return new(error, [], true, activeConversationId);
+        }
     }
 
     public async Task<(bool Success, string Message)> DeleteHistoryAsync(
@@ -123,6 +168,26 @@ public sealed class ChatService(
         return (true, conversationId.HasValue
             ? "Đã xóa đoạn chat."
             : "Đã xóa toàn bộ lịch sử hội thoại của môn học.");
+    }
+
+    private async Task ChargeStudentQuestionAsync(
+        Guid userId,
+        BusinessUserRole role,
+        CancellationToken ct)
+    {
+        if (role != BusinessUserRole.Student || !studentUsage.Enabled) return;
+        await tokenUsage.AddTokensAsync(userId, DateOnly.FromDateTime(DateTime.UtcNow), 1, ct);
+    }
+
+    private async Task<StudentTokenQuotaDto> BuildQuotaAsync(Guid userId, CancellationToken ct)
+    {
+        var limits = await subscriptions.ResolveLimitsAsync(userId, ct);
+        if (!studentUsage.Enabled)
+            return new(false, limits.QuestionsPerDay, 0, limits.QuestionsPerDay, limits.MaxQuestionChars, limits.PackageCode, limits.PackageName);
+
+        var used = await tokenUsage.GetUsedTokensAsync(userId, DateOnly.FromDateTime(DateTime.UtcNow), ct);
+        var remaining = Math.Max(0, limits.QuestionsPerDay - used);
+        return new(true, limits.QuestionsPerDay, used, remaining, limits.MaxQuestionChars, limits.PackageCode, limits.PackageName);
     }
 
     private async Task<bool> CanAccessCourseAsync(Guid userId, BusinessUserRole role, Guid courseId, CancellationToken ct)

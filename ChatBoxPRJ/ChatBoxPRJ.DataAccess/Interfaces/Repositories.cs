@@ -9,6 +9,7 @@ public interface IUserRepository
     Task<bool> CodeOrEmailExistsAsync(string code, string email, CancellationToken ct = default);
     Task AddAsync(AppUser user, CancellationToken ct = default);
     Task<IReadOnlyList<AppUser>> ListLecturersAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<AppUser>> ListStudentsAsync(CancellationToken ct = default);
     Task UpdateAsync(AppUser user, CancellationToken ct = default);
     Task<IReadOnlyList<string>> DeleteUserAsync(Guid id, CancellationToken ct = default);
 }
@@ -59,6 +60,7 @@ public sealed record NamedCountRow(string Name, int Count);
 public sealed record DateCountRow(DateOnly Date, int Count);
 
 public sealed record ReportSnapshot(
+    // Inventory (all-time)
     int StudentCount,
     int LecturerCount,
     int AdminCount,
@@ -70,12 +72,27 @@ public sealed record ReportSnapshot(
     int DocumentsCompleted,
     int DocumentsProcessing,
     int DocumentsFailed,
+    // Period activity
     int UploadsInRange,
     int MessagesInRange,
+    int QuestionsInRange,
+    int AnswersInRange,
+    int RejectedAnswersInRange,
+    int ActiveStudentsInRange,
+    int ActiveCoursesInRange,
+    int ConversationsInRange,
+    int NewStudentsInRange,
+    long TokensUsedInRange,
+    int StudentsUsingTokensInRange,
+    // Series & breakdowns
     IReadOnlyList<NamedCountRow> DocumentsByCourse,
     IReadOnlyList<NamedCountRow> MessagesByCourse,
+    IReadOnlyList<NamedCountRow> TopDocuments,
+    IReadOnlyList<NamedCountRow> FailureReasons,
     IReadOnlyList<DateCountRow> MessagesByDay,
-    IReadOnlyList<DateCountRow> UploadsByDay);
+    IReadOnlyList<DateCountRow> QuestionsByDay,
+    IReadOnlyList<DateCountRow> UploadsByDay,
+    IReadOnlyList<DateCountRow> TokensByDay);
 
 public interface IReportRepository
 {
@@ -88,3 +105,40 @@ public interface IBenchmarkRepository
     Task<BenchmarkRun?> FindRunAsync(Guid runId, CancellationToken ct = default);
     Task<IReadOnlyList<BenchmarkRun>> ListRecentRunsAsync(int take = 20, CancellationToken ct = default);
 }
+
+public interface IStudentTokenUsageRepository
+{
+    Task<int> GetUsedTokensAsync(Guid userId, DateOnly usageDate, CancellationToken ct = default);
+    Task AddTokensAsync(Guid userId, DateOnly usageDate, int tokens, CancellationToken ct = default);
+}
+
+public interface ISubscriptionRepository
+{
+    Task<IReadOnlyList<SubscriptionPackage>> ListActivePackagesAsync(CancellationToken ct = default);
+    Task<SubscriptionPackage?> FindPackageByIdAsync(Guid id, CancellationToken ct = default);
+    Task<SubscriptionPackage?> FindPackageByCodeAsync(string code, CancellationToken ct = default);
+    Task EnsurePackagesSeededAsync(IEnumerable<SubscriptionPackage> packages, CancellationToken ct = default);
+    Task<UserSubscription?> GetActiveSubscriptionAsync(Guid userId, DateTime utcNow, CancellationToken ct = default);
+    Task AddPaymentOrderAsync(PaymentOrder order, CancellationToken ct = default);
+    Task<PaymentOrder?> FindPaymentByOrderCodeAsync(string orderCode, CancellationToken ct = default);
+    Task UpdatePaymentOrderAsync(PaymentOrder order, CancellationToken ct = default);
+    Task ActivateSubscriptionAsync(UserSubscription subscription, CancellationToken ct = default);
+    Task ExpireActiveSubscriptionsAsync(Guid userId, DateTime utcNow, CancellationToken ct = default);
+    Task<IReadOnlyList<AdminStudentAccountRow>> ListStudentAccountsAsync(DateOnly usageDate, DateTime utcNow, CancellationToken ct = default);
+    Task<IReadOnlyList<PaymentOrder>> ListRecentPaymentsAsync(int take = 30, CancellationToken ct = default);
+    Task<(decimal ProRevenue, decimal PreRevenue, decimal TotalRevenue)> GetPaidRevenueAsync(CancellationToken ct = default);
+}
+
+public sealed record AdminStudentAccountRow(
+    Guid UserId,
+    string Code,
+    string FullName,
+    string Email,
+    DateTime CreatedAtUtc,
+    string PackageCode,
+    string PackageName,
+    int QuestionsPerDay,
+    DateTime? EndsAtUtc,
+    int QuestionsUsedToday,
+    int PaidOrderCount,
+    decimal PaidAmountTotal);

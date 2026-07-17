@@ -28,6 +28,9 @@ public static class DependencyInjection
         services.AddSingleton(options.Rag);
         services.AddSingleton(options.Storage);
         services.AddSingleton(options.Ai);
+        services.AddSingleton(options.StudentUsage);
+        services.AddSingleton(options.VnPay);
+        services.AddSingleton<VnPayGateway>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
 
         if (options.Ai.Provider.Equals("Gemini", StringComparison.OrdinalIgnoreCase))
@@ -45,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<ICourseService, CourseService>();
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IChatService, ChatService>();
+        services.AddScoped<ISubscriptionService, SubscriptionService>();
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<IBenchmarkService, BenchmarkService>();
         services.AddScoped<IApplicationInitializer, ApplicationInitializer>();

@@ -14,6 +14,10 @@ public sealed class ChatBoxDbContext(DbContextOptions<ChatBoxDbContext> options)
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<BenchmarkRun> BenchmarkRuns => Set<BenchmarkRun>();
     public DbSet<BenchmarkResult> BenchmarkResults => Set<BenchmarkResult>();
+    public DbSet<StudentDailyTokenUsage> StudentDailyTokenUsages => Set<StudentDailyTokenUsage>();
+    public DbSet<SubscriptionPackage> SubscriptionPackages => Set<SubscriptionPackage>();
+    public DbSet<PaymentOrder> PaymentOrders => Set<PaymentOrder>();
+    public DbSet<UserSubscription> UserSubscriptions => Set<UserSubscription>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -34,6 +38,40 @@ public sealed class ChatBoxDbContext(DbContextOptions<ChatBoxDbContext> options)
         model.Entity<ChatSession>().HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
         model.Entity<ChatMessage>().HasOne(x => x.Session).WithMany(x => x.Messages).HasForeignKey(x => x.SessionId).OnDelete(DeleteBehavior.Cascade);
         model.Entity<ChatMessage>().HasIndex(x => new { x.SessionId, x.ConversationId, x.CreatedAtUtc });
+
+        model.Entity<StudentDailyTokenUsage>().HasIndex(x => new { x.UserId, x.UsageDate }).IsUnique();
+        model.Entity<StudentDailyTokenUsage>().HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+
+        model.Entity<SubscriptionPackage>(e =>
+        {
+            e.ToTable("Packages");
+            e.HasIndex(x => x.Code).IsUnique();
+            e.Property(x => x.PriceVnd).HasPrecision(18, 2);
+        });
+
+        model.Entity<PaymentOrder>(e =>
+        {
+            e.ToTable("Payments");
+            e.Property(x => x.OrderCode).HasMaxLength(40);
+            e.Property(x => x.ProviderTransactionNo).HasColumnName("ProviderReference").HasMaxLength(100);
+            e.Property(x => x.AmountVnd).HasPrecision(18, 2);
+            e.HasIndex(x => x.OrderCode).IsUnique();
+            e.HasIndex(x => new { x.UserId, x.Status });
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Package).WithMany().HasForeignKey(x => x.PackageId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        model.Entity<UserSubscription>(e =>
+        {
+            e.ToTable("UserSubscriptions");
+            e.Property(x => x.PaymentOrderId).HasColumnName("PaymentId");
+            e.Property(x => x.StartsAtUtc).HasColumnName("StartedAtUtc");
+            e.Property(x => x.EndsAtUtc).HasColumnName("ExpiresAtUtc");
+            e.HasIndex(x => new { x.UserId, x.Status });
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Package).WithMany().HasForeignKey(x => x.PackageId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.PaymentOrder).WithMany().HasForeignKey(x => x.PaymentOrderId).OnDelete(DeleteBehavior.SetNull);
+        });
 
         model.Entity<BenchmarkRun>().HasIndex(x => x.StartedAtUtc);
         model.Entity<BenchmarkRun>().HasOne(x => x.Course).WithMany().HasForeignKey(x => x.CourseId).OnDelete(DeleteBehavior.Restrict);

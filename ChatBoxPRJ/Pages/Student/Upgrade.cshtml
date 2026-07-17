@@ -1,0 +1,78 @@
+@page
+@model ChatBoxPRJ.Pages.Student.UpgradeModel
+@{ ViewData["Title"] = "Nâng cấp gói"; }
+<section class="upgrade-page">
+    <div class="upgrade-hero">
+        <span class="eyebrow">GÓI ĐĂNG KÝ</span>
+        <h1>Chọn gói phù hợp nhu cầu học tập</h1>
+        <p>Free miễn phí. Pro và Pre thanh toán qua VNPay, hạn mức số câu hỏi mỗi ngày cao hơn.</p>
+        <div class="upgrade-current">
+            Đang dùng: <b>@Model.Current.PackageName</b>
+            · @Model.Current.QuestionsPerDay.ToString("N0") câu/ngày
+            @if (Model.Current.EndsAtUtc is { } ends)
+            {
+                <span>· hết hạn @ends.ToLocalTime().ToString("dd/MM/yyyy")</span>
+            }
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Flash))
+    {
+        <div class="alert alert-@Model.FlashType" role="alert">@Model.Flash</div>
+    }
+
+    @if (!Model.VnPayConfigured)
+    {
+        <div class="alert alert-warning" role="alert">
+            VNPay chưa cấu hình. Điền <code>VnPay:TmnCode</code> và <code>VnPay:HashSecret</code> trong appsettings để thanh toán Pro/Pre.
+        </div>
+    }
+
+    <div class="upgrade-grid">
+        @foreach (var package in Model.Packages)
+        {
+            <article class="upgrade-card @(package.IsCurrent ? "current" : "") @(package.Code == "PRO" ? "featured" : "")">
+                @if (package.Code == "PRO")
+                {
+                    <span class="upgrade-badge">Phổ biến</span>
+                }
+                <h2>@package.Name</h2>
+                <div class="upgrade-price">
+                    @if (package.PriceVnd <= 0)
+                    {
+                        <b>0đ</b><span>/mãi mãi</span>
+                    }
+                    else
+                    {
+                        <b>@package.PriceVnd.ToString("N0")đ</b><span>/@package.DurationDays ngày</span>
+                    }
+                </div>
+                <p>@package.Description</p>
+                <ul>
+                    <li>@package.QuestionsPerDay.ToString("N0") câu hỏi mỗi ngày</li>
+                    <li>Câu hỏi tối đa @package.MaxQuestionChars.ToString("N0") ký tự</li>
+                    <li>@(package.PriceVnd <= 0 ? "Không cần thanh toán" : "Thanh toán VNPay")</li>
+                </ul>
+                @if (package.IsCurrent)
+                {
+                    <button class="btn btn-outline-secondary" disabled>Gói hiện tại</button>
+                }
+                else if (package.PriceVnd <= 0)
+                {
+                    <form method="post" asp-page-handler="DowngradeFree" onsubmit="return confirm('Hủy gói đang dùng và chuyển về Free? Phần thời gian còn lại sẽ không được hoàn tiền.');">
+                        <button class="btn btn-outline-secondary" type="submit">Chuyển về Free</button>
+                    </form>
+                }
+                else
+                {
+                    <form method="post" asp-page-handler="Checkout">
+                        <input type="hidden" name="packageId" value="@package.Id" />
+                        <button class="btn btn-primary" type="submit" @(Model.VnPayConfigured ? null : "disabled")>
+                            Thanh toán VNPay
+                        </button>
+                    </form>
+                }
+            </article>
+        }
+    </div>
+</section>

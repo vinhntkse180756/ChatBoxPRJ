@@ -17,6 +17,8 @@ public sealed class UserRepository(ChatBoxDbContext db) : IUserRepository
     public Task<bool> CodeOrEmailExistsAsync(string code, string email, CancellationToken ct = default) => db.Users.AnyAsync(x => x.Code == code || x.Email == email, ct);
     public async Task AddAsync(AppUser user, CancellationToken ct = default) { db.Users.Add(user); await db.SaveChangesAsync(ct); }
     public async Task<IReadOnlyList<AppUser>> ListLecturersAsync(CancellationToken ct = default) => await db.Users.AsNoTracking().Where(x => x.Role == UserRole.Lecturer).OrderBy(x => x.FullName).ToListAsync(ct);
+    public async Task<IReadOnlyList<AppUser>> ListStudentsAsync(CancellationToken ct = default)
+        => await db.Users.AsNoTracking().Where(x => x.Role == UserRole.Student).OrderBy(x => x.Code).ToListAsync(ct);
     public async Task UpdateAsync(AppUser user, CancellationToken ct = default) { db.Users.Update(user); await db.SaveChangesAsync(ct); }
     public async Task<IReadOnlyList<string>> DeleteUserAsync(Guid id, CancellationToken ct = default)
     {
@@ -187,12 +189,47 @@ public sealed class ReportRepository(ChatBoxDbContext db) : IReportRepository
 
         int StatusCount(DocumentStatus status) => statusCounts.FirstOrDefault(x => x.Status == status)?.Count ?? 0;
 
+        var periodMessages = db.ChatMessages.AsNoTracking()
+            .Where(x => x.CreatedAtUtc >= fromUtc && x.CreatedAtUtc < toUtc);
+
         var uploadsInRange = await db.Documents.AsNoTracking()
             .CountAsync(x => x.UploadedAtUtc >= fromUtc && x.UploadedAtUtc < toUtc, ct);
-        var messagesInRange = await db.ChatMessages.AsNoTracking()
-            .CountAsync(x => x.CreatedAtUtc >= fromUtc && x.CreatedAtUtc < toUtc, ct);
+        var messagesInRange = await periodMessages.CountAsync(ct);
+        var questionsInRange = await periodMessages.CountAsync(x => x.Role == MessageRole.User, ct);
+        var answersInRange = await periodMessages.CountAsync(x => x.Role == MessageRole.Assistant, ct);
 
-        // Project anonymous types first — EF cannot translate constructors of NamedCountRow after GroupBy.
+        // Reject/error answers: assistant replies without citations (RAG reject hoặc lỗi AI).
+        var rejectedAnswersInRange = await periodMessages.CountAsync(x =>
+            x.Role == MessageRole.Assistant &&
+            (x.CitationsJson == null || x.CitationsJson == "" || x.CitationsJson == "[]"), ct);
+
+        var activeStudentsInRange = await periodMessages
+            .Select(x => x.Session.StudentId)
+            .Distinct()
+            .CountAsync(ct);
+
+        var activeCoursesInRange = await periodMessages
+            .Select(x => x.Session.CourseId)
+            .Distinct()
+            .CountAsync(ct);
+
+        var conversationsInRange = await periodMessages
+            .Select(x => x.ConversationId)
+            .Distinct()
+            .CountAsync(ct);
+
+        var newStudentsInRange = await db.Users.AsNoTracking()
+            .CountAsync(x => x.Role == UserRole.Student && x.CreatedAtUtc >= fromUtc && x.CreatedAtUtc < toUtc, ct);
+
+        var fromDate = DateOnly.FromDateTime(fromUtc);
+        var toDateExclusive = DateOnly.FromDateTime(toUtc);
+        var tokenRows = await db.StudentDailyTokenUsages.AsNoTracking()
+            .Where(x => x.UsageDate >= fromDate && x.UsageDate < toDateExclusive)
+            .Select(x => new { x.UserId, x.UsageDate, x.TokensUsed })
+            .ToListAsync(ct);
+        var tokensUsedInRange = tokenRows.Sum(x => (long)x.TokensUsed);
+        var studentsUsingTokensInRange = tokenRows.Select(x => x.UserId).Distinct().Count();
+
         var documentsByCourseRaw = await db.Documents.AsNoTracking()
             .GroupBy(x => x.Course.Code)
             .Select(g => new { Name = g.Key, Count = g.Count() })
@@ -200,31 +237,65 @@ public sealed class ReportRepository(ChatBoxDbContext db) : IReportRepository
             .Take(10)
             .ToListAsync(ct);
 
-        var messagesByCourseRaw = await db.ChatMessages.AsNoTracking()
-            .Where(x => x.CreatedAtUtc >= fromUtc && x.CreatedAtUtc < toUtc)
+        var messagesByCourseRaw = await periodMessages
             .GroupBy(x => x.Session.Course.Code)
             .Select(g => new { Name = g.Key, Count = g.Count() })
             .OrderByDescending(x => x.Count)
             .Take(10)
             .ToListAsync(ct);
 
-        var messageDaysRaw = await db.ChatMessages.AsNoTracking()
-            .Where(x => x.CreatedAtUtc >= fromUtc && x.CreatedAtUtc < toUtc)
-            .Select(x => x.CreatedAtUtc)
+        var topDocumentsRaw = await periodMessages
+            .Where(x => x.DocumentId != null && x.Role == MessageRole.User)
+            .GroupBy(x => x.DocumentId!.Value)
+            .Select(g => new { DocumentId = g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count)
+            .Take(8)
             .ToListAsync(ct);
+
+        var topDocumentIds = topDocumentsRaw.Select(x => x.DocumentId).ToList();
+        var documentNames = await db.Documents.AsNoTracking()
+            .Where(x => topDocumentIds.Contains(x.Id))
+            .Select(x => new { x.Id, x.OriginalFileName, CourseCode = x.Course.Code })
+            .ToListAsync(ct);
+        var nameMap = documentNames.ToDictionary(x => x.Id, x => $"{x.CourseCode} · {x.OriginalFileName}");
+        var topDocuments = topDocumentsRaw
+            .Select(x => new NamedCountRow(nameMap.GetValueOrDefault(x.DocumentId, "Tài liệu đã xóa"), x.Count))
+            .ToList();
+
+        var failureReasonsRaw = await db.Documents.AsNoTracking()
+            .Where(x => x.Status == DocumentStatus.Failed)
+            .GroupBy(x => x.FailureReason ?? "Không rõ nguyên nhân")
+            .Select(g => new { Name = g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count)
+            .Take(8)
+            .ToListAsync(ct);
+
+        var periodMessageMeta = await periodMessages
+            .Select(x => new { x.CreatedAtUtc, x.Role })
+            .ToListAsync(ct);
+
+        var messageDays = periodMessageMeta
+            .GroupBy(x => x.CreatedAtUtc.Date)
+            .Select(g => (g.Key, g.Count()))
+            .ToList();
+        var questionDays = periodMessageMeta
+            .Where(x => x.Role == MessageRole.User)
+            .GroupBy(x => x.CreatedAtUtc.Date)
+            .Select(g => (g.Key, g.Count()))
+            .ToList();
 
         var uploadDaysRaw = await db.Documents.AsNoTracking()
             .Where(x => x.UploadedAtUtc >= fromUtc && x.UploadedAtUtc < toUtc)
             .Select(x => x.UploadedAtUtc)
             .ToListAsync(ct);
-
-        var messageDays = messageDaysRaw
-            .GroupBy(x => x.Date)
-            .Select(g => (g.Key, g.Count()))
-            .ToList();
         var uploadDays = uploadDaysRaw
             .GroupBy(x => x.Date)
             .Select(g => (g.Key, g.Count()))
+            .ToList();
+
+        var tokenDays = tokenRows
+            .GroupBy(x => x.UsageDate.ToDateTime(TimeOnly.MinValue))
+            .Select(g => (g.Key, g.Sum(x => x.TokensUsed)))
             .ToList();
 
         return new ReportSnapshot(
@@ -241,11 +312,27 @@ public sealed class ReportRepository(ChatBoxDbContext db) : IReportRepository
             StatusCount(DocumentStatus.Failed),
             uploadsInRange,
             messagesInRange,
+            questionsInRange,
+            answersInRange,
+            rejectedAnswersInRange,
+            activeStudentsInRange,
+            activeCoursesInRange,
+            conversationsInRange,
+            newStudentsInRange,
+            tokensUsedInRange,
+            studentsUsingTokensInRange,
             documentsByCourseRaw.Select(x => new NamedCountRow(x.Name, x.Count)).ToList(),
             messagesByCourseRaw.Select(x => new NamedCountRow(x.Name, x.Count)).ToList(),
+            topDocuments,
+            failureReasonsRaw.Select(x => new NamedCountRow(Truncate(x.Name, 80), x.Count)).ToList(),
             FillDays(fromUtc, toUtc, messageDays),
-            FillDays(fromUtc, toUtc, uploadDays));
+            FillDays(fromUtc, toUtc, questionDays),
+            FillDays(fromUtc, toUtc, uploadDays),
+            FillDays(fromUtc, toUtc, tokenDays));
     }
+
+    private static string Truncate(string value, int max)
+        => value.Length <= max ? value : value[..max].TrimEnd() + "…";
 
     private static IReadOnlyList<DateCountRow> FillDays(DateTime fromUtc, DateTime toUtc, IEnumerable<(DateTime Day, int Count)> raw)
     {
@@ -284,6 +371,187 @@ public sealed class BenchmarkRepository(ChatBoxDbContext db) : IBenchmarkReposit
             .OrderByDescending(x => x.StartedAtUtc)
             .Take(take)
             .ToListAsync(ct);
+}
+
+public sealed class StudentTokenUsageRepository(ChatBoxDbContext db) : IStudentTokenUsageRepository
+{
+    public async Task<int> GetUsedTokensAsync(Guid userId, DateOnly usageDate, CancellationToken ct = default)
+    {
+        var row = await db.StudentDailyTokenUsages.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.UserId == userId && x.UsageDate == usageDate, ct);
+        return row?.TokensUsed ?? 0;
+    }
+
+    public async Task AddTokensAsync(Guid userId, DateOnly usageDate, int tokens, CancellationToken ct = default)
+    {
+        if (tokens <= 0) return;
+        var row = await db.StudentDailyTokenUsages
+            .FirstOrDefaultAsync(x => x.UserId == userId && x.UsageDate == usageDate, ct);
+        if (row is null)
+        {
+            db.StudentDailyTokenUsages.Add(new StudentDailyTokenUsage
+            {
+                UserId = userId,
+                UsageDate = usageDate,
+                TokensUsed = tokens
+            });
+        }
+        else
+        {
+            row.TokensUsed += tokens;
+        }
+        await db.SaveChangesAsync(ct);
+    }
+}
+
+public sealed class SubscriptionRepository(ChatBoxDbContext db) : ISubscriptionRepository
+{
+    public async Task<IReadOnlyList<SubscriptionPackage>> ListActivePackagesAsync(CancellationToken ct = default)
+        => await db.SubscriptionPackages.AsNoTracking()
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.SortOrder)
+            .ToListAsync(ct);
+
+    public Task<SubscriptionPackage?> FindPackageByIdAsync(Guid id, CancellationToken ct = default)
+        => db.SubscriptionPackages.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
+
+    public Task<SubscriptionPackage?> FindPackageByCodeAsync(string code, CancellationToken ct = default)
+        => db.SubscriptionPackages.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Code == code, ct);
+
+    public async Task EnsurePackagesSeededAsync(IEnumerable<SubscriptionPackage> packages, CancellationToken ct = default)
+    {
+        foreach (var package in packages)
+        {
+            if (await db.SubscriptionPackages.AnyAsync(x => x.Code == package.Code, ct))
+                continue;
+            db.SubscriptionPackages.Add(package);
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<UserSubscription?> GetActiveSubscriptionAsync(Guid userId, DateTime utcNow, CancellationToken ct = default)
+        => await db.UserSubscriptions.AsNoTracking()
+            .Include(x => x.Package)
+            .Where(x => x.UserId == userId && x.Status == SubscriptionStatus.Active)
+            .Where(x => x.EndsAtUtc == null || x.EndsAtUtc > utcNow)
+            .OrderByDescending(x => x.StartsAtUtc)
+            .FirstOrDefaultAsync(ct);
+
+    public async Task AddPaymentOrderAsync(PaymentOrder order, CancellationToken ct = default)
+    {
+        db.PaymentOrders.Add(order);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public Task<PaymentOrder?> FindPaymentByOrderCodeAsync(string orderCode, CancellationToken ct = default)
+        => db.PaymentOrders
+            .Include(x => x.Package)
+            .FirstOrDefaultAsync(x => x.OrderCode == orderCode, ct);
+
+    public async Task UpdatePaymentOrderAsync(PaymentOrder order, CancellationToken ct = default)
+    {
+        db.PaymentOrders.Update(order);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task ActivateSubscriptionAsync(UserSubscription subscription, CancellationToken ct = default)
+    {
+        db.UserSubscriptions.Add(subscription);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task ExpireActiveSubscriptionsAsync(Guid userId, DateTime utcNow, CancellationToken ct = default)
+    {
+        var active = await db.UserSubscriptions
+            .Where(x => x.UserId == userId && x.Status == SubscriptionStatus.Active)
+            .ToListAsync(ct);
+        foreach (var item in active)
+        {
+            item.Status = SubscriptionStatus.Expired;
+            item.EndsAtUtc ??= utcNow;
+        }
+        if (active.Count > 0)
+            await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<AdminStudentAccountRow>> ListStudentAccountsAsync(
+        DateOnly usageDate,
+        DateTime utcNow,
+        CancellationToken ct = default)
+    {
+        var students = await db.Users.AsNoTracking()
+            .Where(x => x.Role == UserRole.Student)
+            .OrderBy(x => x.Code)
+            .ToListAsync(ct);
+
+        var free = await db.SubscriptionPackages.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Code == "FREE", ct);
+
+        var subscriptions = await db.UserSubscriptions.AsNoTracking()
+            .Include(x => x.Package)
+            .Where(x => x.Status == SubscriptionStatus.Active)
+            .Where(x => x.EndsAtUtc == null || x.EndsAtUtc > utcNow)
+            .ToListAsync(ct);
+
+        var usage = await db.StudentDailyTokenUsages.AsNoTracking()
+            .Where(x => x.UsageDate == usageDate)
+            .ToListAsync(ct);
+
+        var paidOrders = await db.PaymentOrders.AsNoTracking()
+            .Where(x => x.Status == PaymentOrderStatus.Paid)
+            .GroupBy(x => x.UserId)
+            .Select(g => new { UserId = g.Key, Count = g.Count(), Total = g.Sum(x => x.AmountVnd) })
+            .ToListAsync(ct);
+
+        var subByUser = subscriptions
+            .GroupBy(x => x.UserId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.StartsAtUtc).First());
+        var usageByUser = usage.ToDictionary(x => x.UserId, x => x.TokensUsed);
+        var paidByUser = paidOrders.ToDictionary(x => x.UserId, x => (x.Count, x.Total));
+
+        return students.Select(s =>
+        {
+            subByUser.TryGetValue(s.Id, out var sub);
+            var packageCode = sub?.Package.Code ?? free?.Code ?? "FREE";
+            var packageName = sub?.Package.Name ?? free?.Name ?? "Free";
+            var questions = sub?.Package.ChatQuestionsPerDay ?? free?.ChatQuestionsPerDay ?? 10;
+            paidByUser.TryGetValue(s.Id, out var paid);
+            return new AdminStudentAccountRow(
+                s.Id,
+                s.Code,
+                s.FullName,
+                s.Email,
+                s.CreatedAtUtc,
+                packageCode,
+                packageName,
+                questions,
+                sub?.EndsAtUtc,
+                usageByUser.GetValueOrDefault(s.Id),
+                paid.Count,
+                paid.Total);
+        }).ToList();
+    }
+
+    public async Task<IReadOnlyList<PaymentOrder>> ListRecentPaymentsAsync(int take = 30, CancellationToken ct = default)
+        => await db.PaymentOrders.AsNoTracking()
+            .Include(x => x.Package)
+            .Include(x => x.User)
+            .OrderByDescending(x => x.CreatedAtUtc)
+            .Take(take)
+            .ToListAsync(ct);
+
+    public async Task<(decimal ProRevenue, decimal PreRevenue, decimal TotalRevenue)> GetPaidRevenueAsync(CancellationToken ct = default)
+    {
+        var paid = await db.PaymentOrders.AsNoTracking()
+            .Include(x => x.Package)
+            .Where(x => x.Status == PaymentOrderStatus.Paid)
+            .ToListAsync(ct);
+
+        var pro = paid.Where(x => x.Package.Code == "PRO").Sum(x => x.AmountVnd);
+        var pre = paid.Where(x => x.Package.Code == "PRE").Sum(x => x.AmountVnd);
+        return (pro, pre, paid.Sum(x => x.AmountVnd));
+    }
 }
 
 public sealed class EfVectorStore(ChatBoxDbContext db) : IVectorStore

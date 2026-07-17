@@ -22,6 +22,9 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizeFolder("/Admin", "AdminOnly");
     options.Conventions.AuthorizeFolder("/Lecturer", "LecturersOnly");
     options.Conventions.AuthorizeFolder("/Student", "ChatUsers");
+    options.Conventions.AllowAnonymousToPage("/Payments/VnPayReturn");
+    options.Conventions.AllowAnonymousToPage("/Payments/VnPayIpn");
+    options.Conventions.AllowAnonymousToPage("/Payments/Result");
 });
 builder.Services.AddSignalR();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
@@ -42,6 +45,8 @@ var rag = builder.Configuration.GetSection("Rag").Get<RagOptions>() ?? new RagOp
 var storage = builder.Configuration.GetSection("Storage").Get<StorageOptions>() ?? new StorageOptions();
 var ai = builder.Configuration.GetSection("AI").Get<AiOptions>() ?? new AiOptions();
 var vectorStore = builder.Configuration.GetSection("VectorStore").Get<VectorStoreOptions>() ?? new VectorStoreOptions();
+var studentUsage = builder.Configuration.GetSection("StudentUsage").Get<StudentUsageOptions>() ?? new StudentUsageOptions();
+var vnPay = builder.Configuration.GetSection("VnPay").Get<VnPayOptions>() ?? new VnPayOptions();
 storage.RootPath = Path.GetFullPath(storage.RootPath, builder.Environment.ContentRootPath);
 builder.Services.AddBusinessLayer(new ApplicationLayerOptions
 {
@@ -50,8 +55,11 @@ builder.Services.AddBusinessLayer(new ApplicationLayerOptions
     Rag = rag,
     Storage = storage,
     Ai = ai,
-    VectorStore = vectorStore
+    VectorStore = vectorStore,
+    StudentUsage = studentUsage,
+    VnPay = vnPay
 });
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<DocumentWorkQueue>();
 builder.Services.AddSingleton<IDocumentWorkQueue>(sp => sp.GetRequiredService<DocumentWorkQueue>());
 builder.Services.AddSingleton<IDocumentStatusNotifier, SignalRDocumentStatusNotifier>();

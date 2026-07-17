@@ -9,6 +9,8 @@ public sealed class DatabaseMigrationManager(ChatBoxDbContext db)
     private const string AccessLevelMigration   = "20260621084415_AddLecturerCourseAccessLevel";
     private const string ConversationsMigration = "20260621152114_AddChatConversations";
     private const string BenchmarksMigration    = "20260711114057_AddBenchmarks";
+    private const string StudentTokenUsageMigration = "20260716100000_AddStudentDailyTokenUsage";
+    private const string SubscriptionsMigration = "20260717100000_AddSubscriptionsAndPayments";
 
     public async Task MigrateAsync(CancellationToken ct = default)
     {
@@ -76,6 +78,32 @@ public sealed class DatabaseMigrationManager(ChatBoxDbContext db)
                 BEGIN
                     INSERT INTO [dbo].[__EFMigrationsHistory] ([MigrationId], [ProductVersion])
                     VALUES (N'{{BenchmarksMigration}}', N'8.0.0');
+                END;
+                """, ct);
+
+            // Nếu bảng StudentDailyTokenUsages đã tồn tại, ghi nhận migration.
+            await db.Database.ExecuteSqlRawAsync($$"""
+                IF OBJECT_ID(N'[dbo].[__EFMigrationsHistory]', N'U') IS NOT NULL
+                   AND NOT EXISTS (
+                       SELECT 1 FROM [dbo].[__EFMigrationsHistory]
+                       WHERE [MigrationId] = N'{{StudentTokenUsageMigration}}')
+                   AND OBJECT_ID(N'[dbo].[StudentDailyTokenUsages]', N'U') IS NOT NULL
+                BEGIN
+                    INSERT INTO [dbo].[__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+                    VALUES (N'{{StudentTokenUsageMigration}}', N'8.0.0');
+                END;
+                """, ct);
+
+            // Nếu cột token đã có trên Packages, ghi nhận migration (DB cũ đã có Packages/Payments).
+            await db.Database.ExecuteSqlRawAsync($$"""
+                IF OBJECT_ID(N'[dbo].[__EFMigrationsHistory]', N'U') IS NOT NULL
+                   AND NOT EXISTS (
+                       SELECT 1 FROM [dbo].[__EFMigrationsHistory]
+                       WHERE [MigrationId] = N'{{SubscriptionsMigration}}')
+                   AND COL_LENGTH(N'dbo.Packages', N'DailyTokenLimit') IS NOT NULL
+                BEGIN
+                    INSERT INTO [dbo].[__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+                    VALUES (N'{{SubscriptionsMigration}}', N'8.0.0');
                 END;
                 """, ct);
         }

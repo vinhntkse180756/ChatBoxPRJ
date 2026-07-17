@@ -6,6 +6,8 @@ public enum UserRole { Student, Lecturer, Admin }
 public enum DocumentStatus { Processing, Completed, Failed }
 public enum MessageRole { User, Assistant }
 public enum LecturerAccessLevel { Lecturer, CourseHead }
+public enum PaymentOrderStatus { Pending, Paid, Failed, Cancelled }
+public enum SubscriptionStatus { Active, Expired, Cancelled }
 
 public sealed class AppUser
 {
@@ -89,6 +91,67 @@ public sealed class ChatMessage
     public string Content { get; set; } = "";
     public string? CitationsJson { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>Theo dõi token AI đã dùng trong ngày của sinh viên.</summary>
+public sealed class StudentDailyTokenUsage
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid UserId { get; set; }
+    public AppUser User { get; set; } = null!;
+    public DateOnly UsageDate { get; set; }
+    public int TokensUsed { get; set; }
+}
+
+/// <summary>Gói đăng ký (Free / Pro / Pre). Map bảng Packages có sẵn.</summary>
+public sealed class SubscriptionPackage
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    [MaxLength(30)] public string Code { get; set; } = "";
+    [MaxLength(120)] public string Name { get; set; } = "";
+    [MaxLength(1000)] public string Description { get; set; } = "";
+    public decimal PriceVnd { get; set; }
+    public int DailyTokenLimit { get; set; }
+    public int MaxQuestionChars { get; set; }
+    /// <summary>0 = không hết hạn (Free).</summary>
+    public int DurationDays { get; set; }
+    /// <summary>Cột cũ (số câu/ngày); giữ để tương thích DB hiện có.</summary>
+    public int ChatQuestionsPerDay { get; set; }
+    public int SortOrder { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed class PaymentOrder
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    [MaxLength(40)] public string OrderCode { get; set; } = "";
+    public Guid UserId { get; set; }
+    public AppUser User { get; set; } = null!;
+    public Guid PackageId { get; set; }
+    public SubscriptionPackage Package { get; set; } = null!;
+    public decimal AmountVnd { get; set; }
+    [MaxLength(10)] public string Currency { get; set; } = "VND";
+    public PaymentOrderStatus Status { get; set; } = PaymentOrderStatus.Pending;
+    [MaxLength(30)] public string Provider { get; set; } = "VNPay";
+    [MaxLength(100)] public string? ProviderTransactionNo { get; set; }
+    [MaxLength(10)] public string? ProviderResponseCode { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? PaidAtUtc { get; set; }
+}
+
+public sealed class UserSubscription
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid UserId { get; set; }
+    public AppUser User { get; set; } = null!;
+    public Guid PackageId { get; set; }
+    public SubscriptionPackage Package { get; set; } = null!;
+    public Guid? PaymentOrderId { get; set; }
+    public PaymentOrder? PaymentOrder { get; set; }
+    public SubscriptionStatus Status { get; set; } = SubscriptionStatus.Active;
+    public DateTime StartsAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? EndsAtUtc { get; set; }
 }
 
 /// <summary>Một lần chạy toàn bộ test set benchmark (Admin).</summary>

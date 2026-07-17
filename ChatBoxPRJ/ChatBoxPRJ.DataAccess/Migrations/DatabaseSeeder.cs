@@ -35,6 +35,87 @@ public sealed class DatabaseSeeder(ChatBoxDbContext db)
             });
         }
 
+        await SeedPackagesAsync(ct);
+
+        // Đổi từ đếm token sang đếm câu: reset usage cũ (giá trị token rất lớn).
+        var inflated = await db.StudentDailyTokenUsages.Where(x => x.TokensUsed > 100).ToListAsync(ct);
+        foreach (var row in inflated)
+            row.TokensUsed = 0;
+
         await db.SaveChangesAsync(ct);
+    }
+
+    private async Task SeedPackagesAsync(CancellationToken ct)
+    {
+        var legacyPro = await db.SubscriptionPackages
+            .FirstOrDefaultAsync(x => x.Code == "PRO" && x.PriceVnd >= 90_000, ct);
+        if (legacyPro is not null)
+            legacyPro.Code = "PRE";
+
+        var legacyBasic = await db.SubscriptionPackages
+            .FirstOrDefaultAsync(x => x.Code == "BASIC" || (x.Code == "PRO" && x.PriceVnd >= 40_000 && x.PriceVnd <= 60_000), ct);
+        if (legacyBasic is not null)
+            legacyBasic.Code = "PRO";
+
+        await db.SaveChangesAsync(ct);
+
+        await UpsertPackageAsync("FREE", "Free",
+            "Gói miễn phí — đủ dùng để trải nghiệm hỏi đáp từ tài liệu môn học.",
+            price: 0, questions: 10, maxChars: 500, durationDays: 0, sort: 1, ct);
+
+        await UpsertPackageAsync("PRO", "Pro",
+            "Gói Pro — nhiều câu hỏi hơn mỗi ngày, phù hợp học tập thường xuyên.",
+            price: 49_000, questions: 100, maxChars: 1_500, durationDays: 30, sort: 2, ct);
+
+        await UpsertPackageAsync("PRE", "Pre",
+            "Gói Pre — hạn mức lớn nhất cho nhu cầu học tập chuyên sâu.",
+            price: 99_000, questions: 1000, maxChars: 3_000, durationDays: 30, sort: 3, ct);
+
+        var obsolete = await db.SubscriptionPackages
+            .Where(x => x.Code != "FREE" && x.Code != "PRO" && x.Code != "PRE" && x.IsActive)
+            .ToListAsync(ct);
+        foreach (var package in obsolete)
+            package.IsActive = false;
+    }
+
+    private async Task UpsertPackageAsync(
+        string code,
+        string name,
+        string description,
+        decimal price,
+        int questions,
+        int maxChars,
+        int durationDays,
+        int sort,
+        CancellationToken ct)
+    {
+        var package = await db.SubscriptionPackages.FirstOrDefaultAsync(x => x.Code == code, ct);
+        if (package is null)
+        {
+            db.SubscriptionPackages.Add(new SubscriptionPackage
+            {
+                Code = code,
+                Name = name,
+                Description = description,
+                PriceVnd = price,
+                DailyTokenLimit = questions,
+                MaxQuestionChars = maxChars,
+                DurationDays = durationDays,
+                ChatQuestionsPerDay = questions,
+                SortOrder = sort,
+                IsActive = true
+            });
+            return;
+        }
+
+        package.Name = name;
+        package.Description = description;
+        package.PriceVnd = price;
+        package.DailyTokenLimit = questions;
+        package.MaxQuestionChars = maxChars;
+        package.DurationDays = durationDays;
+        package.ChatQuestionsPerDay = questions;
+        package.SortOrder = sort;
+        package.IsActive = true;
     }
 }
