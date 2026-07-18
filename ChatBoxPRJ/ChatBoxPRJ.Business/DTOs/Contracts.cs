@@ -12,7 +12,7 @@ public sealed record DocumentChunkDto(Guid Id, int PageNumber, int ChunkNumber, 
 public sealed record DocumentChunksDto(Guid DocumentId, string FileName, string CourseName, DocumentStatus Status, IReadOnlyList<DocumentChunkDto> Chunks);
 public sealed record CitationDto(Guid DocumentId, string FileName, int PageNumber, int ChunkNumber, string Excerpt);
 public sealed record ChatMessageDto(Guid Id, MessageRole Role, string Content, IReadOnlyList<CitationDto> Citations, DateTime CreatedAtUtc);
-public sealed record ChatHistoryDto(Guid ConversationId, Guid DocumentId, string FileName, string Title, int MessageCount, DateTime UpdatedAtUtc);
+public sealed record ChatHistoryDto(Guid ConversationId, Guid? DocumentId, string FileName, string Title, int MessageCount, DateTime UpdatedAtUtc);
 public sealed record StudentTokenQuotaDto(
     bool Enabled,
     int DailyLimit,

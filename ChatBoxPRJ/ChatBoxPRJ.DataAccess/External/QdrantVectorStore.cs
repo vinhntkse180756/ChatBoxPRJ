@@ -38,24 +38,24 @@ public sealed class QdrantVectorStore(QdrantOptions options) : IVectorStore
 
     public async Task<IReadOnlyList<RetrievedChunk>> SearchAsync(
         Guid courseId,
-        Guid documentId,
+        Guid? documentId,
         float[] queryVector,
         int limit,
         CancellationToken ct = default)
     {
+        var must = new List<object>
+        {
+            new { key = "courseId", match = new { value = courseId.ToString() } }
+        };
+        if (documentId.HasValue)
+            must.Add(new { key = "documentId", match = new { value = documentId.Value.ToString() } });
+
         var request = new
         {
             vector = queryVector,
             limit,
             with_payload = true,
-            filter = new
-            {
-                must = new object[]
-                {
-                    new { key = "courseId", match = new { value = courseId.ToString() } },
-                    new { key = "documentId", match = new { value = documentId.ToString() } }
-                }
-            }
+            filter = new { must }
         };
         using var response = await _http.PostAsJsonAsync($"collections/{_collection}/points/search", request, ct);
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return [];

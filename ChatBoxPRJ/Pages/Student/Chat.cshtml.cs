@@ -13,14 +13,14 @@ public sealed class ChatModel(ICourseService courses, IChatService chat, IDocume
     [BindProperty] public string Question { get; set; } = "";
     public IReadOnlyList<CourseDto> Courses { get; set; } = [];
     public ChatWorkspaceDto? Workspace { get; set; }
-    public bool CanChat => DocumentId.HasValue && Workspace?.Documents.Any(x => x.Id == DocumentId.Value) == true;
+    public bool CanChat => CourseId.HasValue && Workspace is not null && Workspace.Documents.Count > 0;
     [TempData] public string? Flash { get; set; }
     [TempData] public string? FlashType { get; set; }
     public async Task OnGetAsync() => await LoadAsync();
     public async Task<IActionResult> OnPostAskAsync()
     {
-        if (!CourseId.HasValue || !DocumentId.HasValue) return RedirectToPage(new { courseId = CourseId });
-        var result = await chat.AskAsync(User.UserId(), User.UserRole(), CourseId.Value, ConversationId, DocumentId.Value, Question, HttpContext.RequestAborted);
+        if (!CourseId.HasValue) return RedirectToPage();
+        var result = await chat.AskAsync(User.UserId(), User.UserRole(), CourseId.Value, ConversationId, DocumentId, Question, HttpContext.RequestAborted);
         if (result.Rejected && result.ConversationId is null)
         {
             Flash = result.Answer;

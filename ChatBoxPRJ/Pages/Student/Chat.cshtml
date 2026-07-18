@@ -27,12 +27,12 @@ else {
 <div class="knowledge-count"><b>@Model.Workspace.Documents.Count</b><span>tài liệu đã index</span></div>
 </div></header>
 <section class="chat-scroll" id="chatScroll">
-    @if (!Model.Workspace.Messages.Any()) { <div class="welcome-message"><div class="bot-orb">✦</div><h2>Bắt đầu hỏi về @Model.Workspace.Course.Code</h2><p>Mình chỉ trả lời từ tài liệu đã được giảng viên cung cấp và luôn kèm nguồn để bạn kiểm chứng.</p><div class="suggestions"><button type="button">Tóm tắt nội dung chính của môn học</button><button type="button">Giải thích một khái niệm trong tài liệu</button></div></div> }
+    @if (!Model.Workspace.Messages.Any()) { <div class="welcome-message"><div class="bot-orb">✦</div><h2>Bắt đầu hỏi về @Model.Workspace.Course.Code</h2><p>Mình trả lời từ toàn bộ tài liệu đã index của môn học và luôn kèm nguồn để bạn kiểm chứng.</p><div class="suggestions"><button type="button">Tóm tắt nội dung chính của môn học</button><button type="button">Giải thích một khái niệm trong tài liệu</button></div></div> }
     @foreach (var m in Model.Workspace.Messages) { <article class="message @(m.Role == MessageRole.User ? "user" : "assistant")"><div class="message-avatar">@(m.Role == MessageRole.User ? userAvatar : "✦")</div><div class="bubble"><div class="message-label">@(m.Role == MessageRole.User ? "Bạn" : "Trợ lý học tập")</div><div class="message-text">@m.Content</div>
         @if (m.Citations.Any()) { <div class="citations"><b>Nguồn trích dẫn tài liệu</b>@foreach (var c in m.Citations) { <details><summary><span>📎 @c.FileName</span><small>Trang @c.PageNumber · Đoạn @c.ChunkNumber</small></summary><p>@c.Excerpt</p></details> }</div> }
     </div></article> }
 </section>
-<footer class="composer">@if (Model.CanChat && Model.Workspace.TokenQuota is { Enabled: true, Remaining: 0 }) { <div class="select-document-notice">Bạn đã hết hạn mức câu hỏi hôm nay. <a asp-page="/Student/Upgrade">Nâng cấp gói</a> hoặc quay lại vào ngày mai.</div> } else if (Model.CanChat) { <form method="post" asp-page-handler="Ask" id="chatForm"><input type="hidden" asp-for="CourseId"/><input type="hidden" asp-for="DocumentId"/><input type="hidden" asp-for="ConversationId"/><textarea asp-for="Question" rows="1" placeholder="Đặt câu hỏi trong tài liệu đã chọn…" required></textarea><button title="Gửi câu hỏi">➤</button></form><small>Trợ lý chỉ tìm kiếm trong tài liệu đang chọn.</small> } else if (Model.DocumentId.HasValue) { <div class="select-document-notice">Tài liệu nguồn đã bị xóa. Bạn vẫn có thể xem hoặc xóa lịch sử này.</div> } else { <div class="select-document-notice">← Hãy chọn một tài liệu nguồn trước khi chat</div> }</footer>
+<footer class="composer">@if (Model.CanChat && Model.Workspace.TokenQuota is { Enabled: true, Remaining: 0 }) { <div class="select-document-notice">Bạn đã hết hạn mức câu hỏi hôm nay. <a asp-page="/Student/Upgrade">Nâng cấp gói</a> hoặc quay lại vào ngày mai.</div> } else if (Model.CanChat) { <form method="post" asp-page-handler="Ask" id="chatForm"><input type="hidden" asp-for="CourseId"/><input type="hidden" asp-for="DocumentId"/><input type="hidden" asp-for="ConversationId"/><textarea asp-for="Question" rows="1" placeholder="Đặt câu hỏi về môn học…" required></textarea><button title="Gửi câu hỏi">➤</button></form><small>@(Model.DocumentId.HasValue ? "Đang lọc theo tài liệu đã chọn." : "Đang tìm trong toàn bộ tài liệu đã index của môn.")</small> } else if (Model.Workspace.Documents.Count == 0) { <div class="select-document-notice">Môn học chưa có tài liệu đã index để hỏi đáp.</div> } else { <div class="select-document-notice">← Chọn một môn học để bắt đầu chat</div> }</footer>
 }
 </main>
 <aside class="document-sidebar">
@@ -68,8 +68,9 @@ else {
         </div>
     </section>
     <section class="source-section">
-        <div><span class="eyebrow">CHỌN TÀI LIỆU ĐỂ CHAT</span><h2>Tài liệu môn học</h2><p class="source-help">Chọn file để chat hoặc tải tài liệu xuống.</p></div>
+        <div><span class="eyebrow">TÀI LIỆU MÔN HỌC</span><h2>Nguồn tham khảo</h2><p class="source-help">Có thể chat ngay theo môn. Chọn file nếu muốn lọc riêng một tài liệu hoặc tải xuống.</p></div>
         <div class="source-list">
+        <div class="source-document @(Model.DocumentId is null ? "active" : "")"><span>📚</span><div><a asp-page="/Student/Chat" asp-route-courseId="@Model.CourseId"><b>Toàn bộ tài liệu môn</b></a><small>Mặc định khi chat</small></div></div>
         @foreach (var d in Model.Workspace.Documents) {
             <div class="source-document @(Model.DocumentId == d.Id ? "active" : "")"><span>📄</span><div><a asp-page="/Student/Chat" asp-route-courseId="@Model.CourseId" asp-route-documentId="@d.Id"><b>@d.FileName</b></a><small>@d.UploadedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</small><div class="d-flex gap-2 mt-2"><a class="btn btn-sm btn-outline-secondary" asp-page-handler="File" asp-route-courseId="@Model.CourseId" asp-route-documentId="@d.Id">Tải xuống</a></div></div></div>
         }

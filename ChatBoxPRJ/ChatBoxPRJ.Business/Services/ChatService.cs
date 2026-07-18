@@ -34,7 +34,6 @@ public sealed class ChatService(
         var documentNames = docs.ToDictionary(x => x.Id, x => x.FileName);
         var historyMessages = await chats.GetMessagesAsync(session.Id, ct: ct);
         var histories = historyMessages
-            .Where(x => x.DocumentId.HasValue)
             .GroupBy(x => x.ConversationId)
             .Select(group =>
             {
@@ -44,11 +43,14 @@ public sealed class ChatService(
                     .Select(x => x.Content.Trim())
                     .FirstOrDefault() ?? "Cuộc trò chuyện";
                 var title = firstQuestion.Length <= 70 ? firstQuestion : firstQuestion[..70] + "…";
-                var documentId = group.Select(x => x.DocumentId!.Value).First();
+                var documentId = group.Select(x => x.DocumentId).FirstOrDefault(x => x.HasValue);
+                var fileName = documentId is { } id
+                    ? documentNames.GetValueOrDefault(id, "Tài liệu đã bị xóa")
+                    : "Toàn bộ tài liệu môn";
                 return new ChatHistoryDto(
                     group.Key,
                     documentId,
-                    documentNames.GetValueOrDefault(documentId, "Tài liệu đã bị xóa"),
+                    fileName,
                     title,
                     group.Count(),
                     group.Max(x => x.CreatedAtUtc));
@@ -64,7 +66,7 @@ public sealed class ChatService(
         return new ChatWorkspaceDto(mapper.Map<CourseDto>(course), session.Id, docs, histories, messages, quota);
     }
 
-    public async Task<ChatAnswer> AskAsync(Guid userId, BusinessUserRole role, Guid courseId, Guid? conversationId, Guid documentId, string question, CancellationToken ct = default)
+    public async Task<ChatAnswer> AskAsync(Guid userId, BusinessUserRole role, Guid courseId, Guid? conversationId, Guid? documentId, string question, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(question)) return new("Vui lòng nhập câu hỏi.", [], true);
         if (!await CanAccessCourseAsync(userId, role, courseId, ct)) return new("Bạn chưa được cấp quyền truy cập môn học này.", [], true);
@@ -81,28 +83,63 @@ public sealed class ChatService(
                 return new($"Bạn đã hết hạn mức {dailyLimit:N0} câu hỏi hôm nay (gói {limits.PackageName}). Hãy nâng cấp gói hoặc quay lại ngày mai.", [], true);
         }
 
-        var selectedDocument = await documents.FindAsync(documentId, ct);
-        if (selectedDocument is null || selectedDocument.CourseId != courseId || selectedDocument.Status != DataDocumentStatus.Completed)
-            return new("Vui lòng chọn một tài liệu đã lập chỉ mục trước khi đặt câu hỏi.", [], true);
+        var courseDocuments = await documents.ListAsync(courseId, completedOnly: true, ct);
+        if (courseDocuments.Count == 0)
+            return new("Môn học chưa có tài liệu đã lập chỉ mục để hỏi đáp.", [], true);
+
+        Guid? scopedDocumentId = null;
+        if (documentId.HasValue)
+        {
+            var selectedDocument = courseDocuments.FirstOrDefault(x => x.Id == documentId.Value);
+            if (selectedDocument is null || selectedDocument.Status != DataDocumentStatus.Completed)
+                return new("Tài liệu đã chọn không còn khả dụng. Hãy chat theo môn hoặc chọn tài liệu khác.", [], true);
+            scopedDocumentId = selectedDocument.Id;
+        }
 
         var session = await chats.GetOrCreateSessionAsync(userId, courseId, ct);
         var activeConversationId = conversationId ?? Guid.NewGuid();
         var history = await chats.GetMessagesAsync(session.Id, activeConversationId, ct);
 
-        if (history.Any(x => x.DocumentId != documentId))
-            return new("Cuộc trò chuyện này thuộc một tài liệu khác. Hãy tạo đoạn chat mới.", [], true, activeConversationId);
+        if (history.Count > 0)
+        {
+            var historyScoped = history.Any(x => x.DocumentId.HasValue);
+            if (scopedDocumentId.HasValue)
+            {
+                if (history.Any(x => x.DocumentId != scopedDocumentId))
+                    return new("Cuộc trò chuyện này không khớp tài liệu đang chọn. Hãy tạo đoạn chat mới.", [], true, activeConversationId);
+            }
+            else if (historyScoped)
+            {
+                return new("Cuộc trò chuyện này gắn với một tài liệu cụ thể. Hãy tạo đoạn chat mới để hỏi theo cả môn.", [], true, activeConversationId);
+            }
+        }
 
-        await chats.AddMessageAsync(new ChatMessage { SessionId = session.Id, ConversationId = activeConversationId, DocumentId = documentId, Role = DataMessageRole.User, Content = trimmedQuestion }, ct);
+        await chats.AddMessageAsync(new ChatMessage
+        {
+            SessionId = session.Id,
+            ConversationId = activeConversationId,
+            DocumentId = scopedDocumentId,
+            Role = DataMessageRole.User,
+            Content = trimmedQuestion
+        }, ct);
 
         try
         {
             var query = await embeddings.EmbedAsync(trimmedQuestion, EmbeddingTask.Query, ct);
-            var found = await vectors.SearchAsync(courseId, documentId, query, options.TopK, ct);
+            var found = await vectors.SearchAsync(courseId, scopedDocumentId, query, options.TopK, ct);
 
             if (found.Count == 0 || found.Max(x => x.Score) < options.SimilarityThreshold)
             {
                 const string refusal = "Xin lỗi, câu hỏi của bạn không nằm trong phạm vi tài liệu học tập của môn học này.";
-                await chats.AddMessageAsync(new ChatMessage { SessionId = session.Id, ConversationId = activeConversationId, DocumentId = documentId, Role = DataMessageRole.Assistant, Content = refusal, CitationsJson = "[]" }, ct);
+                await chats.AddMessageAsync(new ChatMessage
+                {
+                    SessionId = session.Id,
+                    ConversationId = activeConversationId,
+                    DocumentId = scopedDocumentId,
+                    Role = DataMessageRole.Assistant,
+                    Content = refusal,
+                    CitationsJson = "[]"
+                }, ct);
                 await ChargeStudentQuestionAsync(userId, role, ct);
                 return new(refusal, [], true, activeConversationId);
             }
@@ -120,7 +157,7 @@ public sealed class ChatService(
             {
                 SessionId = session.Id,
                 ConversationId = activeConversationId,
-                DocumentId = documentId,
+                DocumentId = scopedDocumentId,
                 Role = DataMessageRole.Assistant,
                 Content = answer,
                 CitationsJson = JsonSerializer.Serialize(citations)
@@ -138,7 +175,7 @@ public sealed class ChatService(
             {
                 SessionId = session.Id,
                 ConversationId = activeConversationId,
-                DocumentId = documentId,
+                DocumentId = scopedDocumentId,
                 Role = DataMessageRole.Assistant,
                 Content = error,
                 CitationsJson = "[]"

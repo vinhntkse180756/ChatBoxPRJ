@@ -559,10 +559,14 @@ public sealed class EfVectorStore(ChatBoxDbContext db) : IVectorStore
     // Các vector fallback được lưu cùng DocumentChunk bởi DocumentRepository.
     public Task UpsertAsync(LearningDocument document, IReadOnlyList<DocumentChunk> chunks, CancellationToken ct = default) => Task.CompletedTask;
 
-    public async Task<IReadOnlyList<RetrievedChunk>> SearchAsync(Guid courseId, Guid documentId, float[] queryVector, int limit, CancellationToken ct = default)
+    public async Task<IReadOnlyList<RetrievedChunk>> SearchAsync(Guid courseId, Guid? documentId, float[] queryVector, int limit, CancellationToken ct = default)
     {
-        var chunks = await db.DocumentChunks.AsNoTracking().Include(x => x.Document)
-            .Where(x => x.CourseId == courseId && x.DocumentId == documentId && x.Document.Status == DocumentStatus.Completed).ToListAsync(ct);
+        var query = db.DocumentChunks.AsNoTracking().Include(x => x.Document)
+            .Where(x => x.CourseId == courseId && x.Document.Status == DocumentStatus.Completed);
+        if (documentId.HasValue)
+            query = query.Where(x => x.DocumentId == documentId.Value);
+
+        var chunks = await query.ToListAsync(ct);
         return chunks.Select(x => new RetrievedChunk(x.Id, x.DocumentId, x.Document.OriginalFileName, x.PageNumber, x.ChunkNumber, x.Content,
                 Cosine(queryVector, JsonSerializer.Deserialize<float[]>(x.VectorJson) ?? [])))
             .OrderByDescending(x => x.Score).Take(limit).ToList();
