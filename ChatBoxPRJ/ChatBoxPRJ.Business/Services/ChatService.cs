@@ -70,16 +70,10 @@ public sealed class ChatService(
         if (!await CanAccessCourseAsync(userId, role, courseId, ct)) return new("Bạn chưa được cấp quyền truy cập môn học này.", [], true);
 
         var trimmedQuestion = question.Trim();
-        int dailyLimit = 0;
-        int maxChars = studentUsage.MaxQuestionChars;
         if (role == BusinessUserRole.Student && studentUsage.Enabled)
         {
             var limits = await subscriptions.ResolveLimitsAsync(userId, ct);
-            dailyLimit = limits.QuestionsPerDay;
-            maxChars = limits.MaxQuestionChars;
-
-            if (trimmedQuestion.Length > maxChars)
-                return new($"Câu hỏi tối đa {maxChars} ký tự. Hiện tại: {trimmedQuestion.Length}.", [], true);
+            var dailyLimit = limits.QuestionsPerDay;
 
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
             var used = await tokenUsage.GetUsedTokensAsync(userId, today, ct);
