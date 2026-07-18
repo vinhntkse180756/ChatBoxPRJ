@@ -227,16 +227,14 @@ public sealed class SubscriptionService(
             p.CreatedAtUtc,
             p.PaidAtUtc)).ToList();
 
-        var (revenuePro, revenuePre, revenueTotal) = await subscriptions.GetPaidRevenueAsync(ct);
+        var (revenuePro, _, revenueTotal) = await subscriptions.GetPaidRevenueAsync(ct);
 
         return new(
             students.Count,
             students.Count(x => x.PackageCode == "FREE"),
             students.Count(x => x.PackageCode == "PRO"),
-            students.Count(x => x.PackageCode == "PRE"),
             paymentDtos.Count(x => x.Status == "Paid" && x.PaidAtUtc is { } paid && DateOnly.FromDateTime(paid) == today),
             revenuePro,
-            revenuePre,
             revenueTotal,
             students,
             paymentDtos);
@@ -251,9 +249,12 @@ public sealed class SubscriptionService(
         if (code == "FREE")
             return await DowngradeToFreeAsync(studentId, ct);
 
+        if (code == "PRE")
+            return (false, "Gói Pre đã ngừng cung cấp. Chỉ còn Free và Pro.");
+
         var package = await subscriptions.FindPackageByCodeAsync(code, ct);
         if (package is null || !package.IsActive || package.PriceVnd <= 0)
-            return (false, "Không tìm thấy gói Pro/Pre.");
+            return (false, "Không tìm thấy gói Pro.");
 
         var now = DateTime.UtcNow;
         await subscriptions.ExpireActiveSubscriptionsAsync(studentId, now, ct);

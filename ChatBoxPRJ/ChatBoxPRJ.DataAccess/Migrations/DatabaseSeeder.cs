@@ -61,18 +61,33 @@ public sealed class DatabaseSeeder(ChatBoxDbContext db)
 
         await UpsertPackageAsync("FREE", "Free",
             "Gói miễn phí — đủ dùng để trải nghiệm hỏi đáp từ tài liệu môn học.",
-            price: 0, questions: 10, maxChars: 500, durationDays: 0, sort: 1, ct);
+            price: 0, questions: 10, maxChars: 500, durationDays: 0, sort: 1, active: true, ct);
 
         await UpsertPackageAsync("PRO", "Pro",
             "Gói Pro — nhiều câu hỏi hơn mỗi ngày, phù hợp học tập thường xuyên.",
-            price: 49_000, questions: 100, maxChars: 1_500, durationDays: 30, sort: 2, ct);
+            price: 49_000, questions: 100, maxChars: 1_500, durationDays: 30, sort: 2, active: true, ct);
 
+        // Ngừng bán gói Pre: ẩn khỏi trang nâng cấp và hết hạn subscription đang dùng Pre.
         await UpsertPackageAsync("PRE", "Pre",
-            "Gói Pre — hạn mức lớn nhất cho nhu cầu học tập chuyên sâu.",
-            price: 99_000, questions: 1000, maxChars: 3_000, durationDays: 30, sort: 3, ct);
+            "Gói Pre đã ngừng cung cấp.",
+            price: 99_000, questions: 1000, maxChars: 3_000, durationDays: 30, sort: 3, active: false, ct);
+
+        var pre = await db.SubscriptionPackages.FirstOrDefaultAsync(x => x.Code == "PRE", ct);
+        if (pre is not null)
+        {
+            var activePreSubs = await db.UserSubscriptions
+                .Where(x => x.PackageId == pre.Id && x.Status == SubscriptionStatus.Active)
+                .ToListAsync(ct);
+            var now = DateTime.UtcNow;
+            foreach (var sub in activePreSubs)
+            {
+                sub.Status = SubscriptionStatus.Expired;
+                sub.EndsAtUtc = now;
+            }
+        }
 
         var obsolete = await db.SubscriptionPackages
-            .Where(x => x.Code != "FREE" && x.Code != "PRO" && x.Code != "PRE" && x.IsActive)
+            .Where(x => x.Code != "FREE" && x.Code != "PRO" && x.IsActive)
             .ToListAsync(ct);
         foreach (var package in obsolete)
             package.IsActive = false;
@@ -87,6 +102,7 @@ public sealed class DatabaseSeeder(ChatBoxDbContext db)
         int maxChars,
         int durationDays,
         int sort,
+        bool active,
         CancellationToken ct)
     {
         var package = await db.SubscriptionPackages.FirstOrDefaultAsync(x => x.Code == code, ct);
@@ -103,7 +119,7 @@ public sealed class DatabaseSeeder(ChatBoxDbContext db)
                 DurationDays = durationDays,
                 ChatQuestionsPerDay = questions,
                 SortOrder = sort,
-                IsActive = true
+                IsActive = active
             });
             return;
         }
@@ -116,6 +132,6 @@ public sealed class DatabaseSeeder(ChatBoxDbContext db)
         package.DurationDays = durationDays;
         package.ChatQuestionsPerDay = questions;
         package.SortOrder = sort;
-        package.IsActive = true;
+        package.IsActive = active;
     }
 }

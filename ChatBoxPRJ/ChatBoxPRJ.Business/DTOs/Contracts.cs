@@ -83,10 +83,8 @@ public sealed record AdminStudentsDashboardDto(
     int StudentCount,
     int FreeCount,
     int ProCount,
-    int PreCount,
     int PaidTodayCount,
     decimal RevenuePro,
-    decimal RevenuePre,
     decimal RevenueTotal,
     IReadOnlyList<AdminStudentAccountDto> Students,
     IReadOnlyList<AdminPaymentDto> RecentPayments);

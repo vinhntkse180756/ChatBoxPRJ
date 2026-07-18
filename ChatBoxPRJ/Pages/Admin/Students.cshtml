@@ -18,10 +18,7 @@
     <div class="report-kpi"><span>Tổng SV</span><b>@Model.Dashboard.StudentCount</b></div>
     <div class="report-kpi"><span>Free</span><b>@Model.Dashboard.FreeCount</b></div>
     <div class="report-kpi"><span>Pro</span><b>@Model.Dashboard.ProCount</b><small>DT Pro: @Model.Dashboard.RevenuePro.ToString("N0")đ</small></div>
-    <div class="report-kpi"><span>Pre</span><b>@Model.Dashboard.PreCount</b><small>DT Pre: @Model.Dashboard.RevenuePre.ToString("N0")đ</small></div>
-</div>
-<div class="report-kpi-grid" style="margin-top:14px">
-    <div class="report-kpi accent"><span>Tổng doanh thu VNPay</span><b>@Model.Dashboard.RevenueTotal.ToString("N0")đ</b><small>Pro @Model.Dashboard.RevenuePro.ToString("N0")đ + Pre @Model.Dashboard.RevenuePre.ToString("N0")đ · thanh toán hôm nay: @Model.Dashboard.PaidTodayCount</small></div>
+    <div class="report-kpi accent"><span>Tổng doanh thu VNPay</span><b>@Model.Dashboard.RevenueTotal.ToString("N0")đ</b><small>Thanh toán hôm nay: @Model.Dashboard.PaidTodayCount</small></div>
 </div>
 
 <section class="panel grow mb-4">
@@ -36,7 +33,6 @@
                 <option value="ALL">Tất cả</option>
                 <option value="FREE">Free</option>
                 <option value="PRO">Pro</option>
-                <option value="PRE">Pre</option>
             </select>
         </div>
         <div class="admin-student-filter-actions">
@@ -89,7 +85,6 @@
                             <select name="packageCode" class="form-select form-select-sm">
                                 <option value="FREE">Free</option>
                                 <option value="PRO">Pro</option>
-                                <option value="PRE">Pre</option>
                             </select>
                             <button class="btn btn-sm btn-outline-primary" type="submit">Gán</button>
                         </form>

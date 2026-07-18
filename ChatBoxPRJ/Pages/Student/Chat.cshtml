@@ -18,7 +18,7 @@ else {
     <div class="token-quota @(quota.Remaining == 0 ? "exhausted" : "")" title="Số câu hỏi còn lại hôm nay theo gói @quota.PackageName">
         <b>@quota.Remaining.ToString("N0")</b>
         <span>@quota.PackageName · câu còn lại / @quota.DailyLimit.ToString("N0")</span>
-        @if (quota.PackageCode != "PRE")
+        @if (quota.PackageCode == "FREE")
         {
             <a class="quota-upgrade" asp-page="/Student/Upgrade">Nâng cấp</a>
         }

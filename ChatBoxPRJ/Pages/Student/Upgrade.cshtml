@@ -2,29 +2,32 @@
 @model ChatBoxPRJ.Pages.Student.UpgradeModel
 @{ ViewData["Title"] = "Nâng cấp gói"; }
 <section class="upgrade-page">
-    <div class="upgrade-hero">
+    <header class="upgrade-hero">
         <span class="eyebrow">GÓI ĐĂNG KÝ</span>
         <h1>Chọn gói phù hợp nhu cầu học tập</h1>
-        <p>Free miễn phí. Pro và Pre thanh toán qua VNPay, hạn mức số câu hỏi mỗi ngày cao hơn.</p>
+        <p>Free để trải nghiệm. Nâng Pro khi cần hỏi nhiều hơn mỗi ngày — thanh toán qua VNPay.</p>
         <div class="upgrade-current">
-            Đang dùng: <b>@Model.Current.PackageName</b>
-            · @Model.Current.QuestionsPerDay.ToString("N0") câu/ngày
+            <span>Đang dùng</span>
+            <b>@Model.Current.PackageName</b>
+            <i>·</i>
+            <em>@Model.Current.QuestionsPerDay.ToString("N0") câu/ngày</em>
             @if (Model.Current.EndsAtUtc is { } ends)
             {
-                <span>· hết hạn @ends.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                <i>·</i>
+                <em>hết hạn @ends.ToLocalTime().ToString("dd/MM/yyyy")</em>
             }
         </div>
-    </div>
+    </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.Flash))
     {
-        <div class="alert alert-@Model.FlashType" role="alert">@Model.Flash</div>
+        <div class="alert alert-@Model.FlashType upgrade-alert" role="alert">@Model.Flash</div>
     }
 
     @if (!Model.VnPayConfigured)
     {
-        <div class="alert alert-warning" role="alert">
-            VNPay chưa cấu hình. Điền <code>VnPay:TmnCode</code> và <code>VnPay:HashSecret</code> trong appsettings để thanh toán Pro/Pre.
+        <div class="alert alert-warning upgrade-alert" role="alert">
+            VNPay chưa cấu hình. Điền <code>VnPay:TmnCode</code> và <code>VnPay:HashSecret</code> trong appsettings để thanh toán Pro.
         </div>
     }
 
@@ -32,26 +35,34 @@
         @foreach (var package in Model.Packages)
         {
             <article class="upgrade-card @(package.IsCurrent ? "current" : "") @(package.Code == "PRO" ? "featured" : "")">
-                @if (package.Code == "PRO")
-                {
-                    <span class="upgrade-badge">Phổ biến</span>
-                }
-                <h2>@package.Name</h2>
-                <div class="upgrade-price">
-                    @if (package.PriceVnd <= 0)
+                <div class="upgrade-card-top">
+                    @if (package.Code == "PRO")
                     {
-                        <b>0đ</b><span>/mãi mãi</span>
+                        <span class="upgrade-badge">Phổ biến</span>
                     }
                     else
                     {
-                        <b>@package.PriceVnd.ToString("N0")đ</b><span>/@package.DurationDays ngày</span>
+                        <span class="upgrade-badge muted">Cơ bản</span>
                     }
+                    <h2>@package.Name</h2>
+                    <div class="upgrade-price">
+                        @if (package.PriceVnd <= 0)
+                        {
+                            <b>0đ</b><span>/mãi mãi</span>
+                        }
+                        else
+                        {
+                            <b>@package.PriceVnd.ToString("N0")đ</b><span>/@package.DurationDays ngày</span>
+                        }
+                    </div>
+                    <p>@package.Description</p>
                 </div>
-                <p>@package.Description</p>
                 <ul>
-                    <li>@package.QuestionsPerDay.ToString("N0") câu hỏi mỗi ngày</li>
-                    <li>@(package.PriceVnd <= 0 ? "Không cần thanh toán" : "Thanh toán VNPay")</li>
+                    <li><strong>@package.QuestionsPerDay.ToString("N0")</strong> câu hỏi mỗi ngày</li>
+                    <li>@(package.PriceVnd <= 0 ? "Không cần thanh toán" : "Thanh toán an toàn qua VNPay")</li>
+                    <li>Hỏi đáp trong phạm vi tài liệu môn học</li>
                 </ul>
+                <div class="upgrade-card-action">
                 @if (package.IsCurrent)
                 {
                     <button class="btn btn-outline-secondary" disabled>Gói hiện tại</button>
@@ -71,6 +82,7 @@
                         </button>
                     </form>
                 }
+                </div>
             </article>
         }
     </div>

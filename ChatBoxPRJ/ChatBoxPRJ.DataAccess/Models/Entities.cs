@@ -103,7 +103,7 @@ public sealed class StudentDailyTokenUsage
     public int TokensUsed { get; set; }
 }
 
-/// <summary>Gói đăng ký (Free / Pro / Pre). Map bảng Packages có sẵn.</summary>
+/// <summary>Gói đăng ký (Free / Pro). Map bảng Packages có sẵn.</summary>
 public sealed class SubscriptionPackage
 {
     public Guid Id { get; set; } = Guid.NewGuid();
