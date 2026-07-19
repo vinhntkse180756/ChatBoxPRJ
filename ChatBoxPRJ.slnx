@@ -1,5 +1,7 @@
 <Solution>
-  <Project Path="ChatBoxPRJ/ChatBoxPRJ.Web.csproj" />
-  <Project Path="ChatBoxPRJ/ChatBoxPRJ.Business/ChatBoxPRJ.Business.csproj" />
-  <Project Path="ChatBoxPRJ/ChatBoxPRJ.DataAccess/ChatBoxPRJ.DataAccess.csproj" />
+  <Project Path="Presentation/Presentation.csproj" />
+  <Project Path="BusinessLogic/BusinessLogic.csproj" />
+  <Project Path="BusinessObjects/BusinessObjects.csproj" />
+  <Project Path="DataAcessLayer/DataAcessLayer.csproj" />
+  <Project Path="AIService/AIService.csproj" />
 </Solution>

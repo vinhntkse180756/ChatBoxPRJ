@@ -1,0 +1,7 @@
+﻿Dependency Injection (DI) in ASP.NET Core is a technique for achieving Inversion of Control (IoC) between classes and their dependencies.
+It is a first-class citizen in ASP.NET Core. Service lifetimes include:
+1. Transient: Created each time they are requested. Ideal for lightweight, stateless services.
+2. Scoped: Created once per client request (connection). Useful for services holding state within a request, like DbContext.
+3. Singleton: Created the first time they are requested and persist throughout the application lifecycle.
+Constructor injection is the preferred way to request dependencies.
+Avoid Service Locator pattern which hides dependencies and makes testing harder.

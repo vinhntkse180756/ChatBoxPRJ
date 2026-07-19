@@ -1,0 +1,6 @@
+﻿Entity Framework Core (EF Core) performance tuning is crucial for scaling .NET applications.
+Use AsNoTracking() for read-only queries to avoid change tracking overhead.
+Ensure indexes are created on columns frequently used in WHERE, JOIN, and ORDER BY clauses.
+Use eager loading with Include() to prevent N+1 query problems, but avoid loading too much related data.
+Consider split queries with AsSplitQuery() for wide queries with multiple collection joins.
+Batch updates and deletes using ExecuteUpdate() and ExecuteDelete() in EF Core 7+ to bypass EF change tracker entirely.

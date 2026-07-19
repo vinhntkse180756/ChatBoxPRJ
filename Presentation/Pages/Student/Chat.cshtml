@@ -1,0 +1,88 @@
+@page
+@using BusinessLogic.DTOs
+@model Presentation.Pages.Student.ChatModel
+@{ ViewData["Title"] = "Hỏi đáp học tập"; ViewData["FullWidth"] = true; var userAvatar = User.IsInRole("Lecturer") ? "GV" : "SV"; }
+<div class="chat-app">
+<aside class="course-sidebar"><div class="sidebar-brand"><span class="brand-mark">S</span><div><b>StudySpace</b><small>Kho tri thức mở</small></div></div>
+<div class="course-search"><span>⌕</span><input id="courseSearch" placeholder="Tìm môn học…" /></div>
+<nav id="courseList">@foreach (var c in Model.Courses) { <a class="course-nav @(Model.CourseId == c.Id ? "active" : "")" asp-page="/Student/Chat" asp-route-courseId="@c.Id"><span>@c.Code[..Math.Min(2,c.Code.Length)]</span><div><b>@c.Code</b><small>@c.Name</small></div></a> }</nav>
+<div class="sidebar-foot"><small>@Model.Courses.Count môn học đang mở</small><b>Tự do khám phá nội dung</b></div></aside>
+<main class="chat-main">
+@if (Model.Workspace is null) { <div class="empty-state"><span>📚</span><h1>Chưa có môn học</h1><p>@(User.IsInRole("Lecturer") ? "Bạn chưa được quản trị viên cấp quyền môn học nào." : "Quản trị viên cần tạo ít nhất một môn trước khi bắt đầu.")</p></div> }
+else {
+@if (Model.Flash is not null) { <div class="chat-flash alert alert-@(Model.FlashType ?? "info")" role="alert">@Model.Flash</div> }
+<header class="chat-header"><div><span class="course-badge">@Model.Workspace.Course.Code</span><h1>@Model.Workspace.Course.Name</h1><p>@Model.Workspace.Course.Description</p></div>
+<div class="chat-header-meta">
+@if (Model.Workspace.TokenQuota is { Enabled: true } quota)
+{
+    <div class="token-quota @(quota.Remaining == 0 ? "exhausted" : "")" title="Số câu hỏi còn lại hôm nay theo gói @quota.PackageName">
+        <b>@quota.Remaining.ToString("N0")</b>
+        <span>@quota.PackageName · câu còn lại / @quota.DailyLimit.ToString("N0")</span>
+        @if (quota.PackageCode == "FREE")
+        {
+            <a class="quota-upgrade" asp-page="/Student/Upgrade">Nâng cấp</a>
+        }
+    </div>
+}
+<div class="knowledge-count"><b>@Model.Workspace.Documents.Count</b><span>tài liệu đã index</span></div>
+</div></header>
+<section class="chat-scroll" id="chatScroll">
+    @if (!Model.Workspace.Messages.Any()) { <div class="welcome-message"><div class="bot-orb">✦</div><h2>Bắt đầu hỏi về @Model.Workspace.Course.Code</h2><p>Mình trả lời từ toàn bộ tài liệu đã index của môn học và luôn kèm nguồn để bạn kiểm chứng.</p><div class="suggestions"><button type="button">Tóm tắt nội dung chính của môn học</button><button type="button">Giải thích một khái niệm trong tài liệu</button></div></div> }
+    @foreach (var m in Model.Workspace.Messages) { <article class="message @(m.Role == MessageRole.User ? "user" : "assistant")"><div class="message-avatar">@(m.Role == MessageRole.User ? userAvatar : "✦")</div><div class="bubble"><div class="message-label">@(m.Role == MessageRole.User ? "Bạn" : "Trợ lý học tập")</div><div class="message-text">@m.Content</div>
+        @if (m.Citations.Any()) { <div class="citations"><b>Nguồn trích dẫn tài liệu</b>@foreach (var c in m.Citations) { <details><summary><span>📎 @c.FileName</span><small>Trang @c.PageNumber · Đoạn @c.ChunkNumber</small></summary><p>@c.Excerpt</p></details> }</div> }
+    </div></article> }
+</section>
+<footer class="composer">@if (Model.CanChat && Model.Workspace.TokenQuota is { Enabled: true, Remaining: 0 }) { <div class="select-document-notice">Bạn đã hết hạn mức câu hỏi hôm nay. <a asp-page="/Student/Upgrade">Nâng cấp gói</a> hoặc quay lại vào ngày mai.</div> } else if (Model.CanChat) { <form method="post" asp-page-handler="Ask" id="chatForm"><input type="hidden" asp-for="CourseId"/><input type="hidden" asp-for="DocumentId"/><input type="hidden" asp-for="ConversationId"/><textarea asp-for="Question" rows="1" placeholder="Đặt câu hỏi về môn học…" required></textarea><button title="Gửi câu hỏi">➤</button></form><small>@(Model.DocumentId.HasValue ? "Đang lọc theo tài liệu đã chọn." : "Đang tìm trong toàn bộ tài liệu đã index của môn.")</small> } else if (Model.Workspace.Documents.Count == 0) { <div class="select-document-notice">Môn học chưa có tài liệu đã index để hỏi đáp.</div> } else { <div class="select-document-notice">← Chọn một môn học để bắt đầu chat</div> }</footer>
+}
+</main>
+<aside class="document-sidebar">
+@if (Model.Workspace is not null) {
+    <section class="history-section">
+        <div class="sidebar-section-title">
+            <div><span class="eyebrow">LỊCH SỬ</span><h2>Hội thoại gần đây</h2><a class="new-chat-link" asp-page="/Student/Chat" asp-route-courseId="@Model.CourseId">+ Đoạn chat mới</a></div>
+            @if (Model.Workspace.Histories.Any()) {
+                <form method="post" asp-page-handler="DeleteHistory" onsubmit="return confirm('Xóa toàn bộ lịch sử hội thoại của môn học này?')">
+                    <input type="hidden" asp-for="CourseId" />
+                    <input type="hidden" name="all" value="true" />
+                    <button class="history-clear" title="Xóa toàn bộ lịch sử">Xóa tất cả</button>
+                </form>
+            }
+        </div>
+        <div class="history-list">
+        @foreach (var history in Model.Workspace.Histories) {
+            <div class="history-item @(Model.ConversationId == history.ConversationId ? "active" : "")">
+                <div>
+                    <a asp-page="/Student/Chat" asp-route-courseId="@Model.CourseId" asp-route-documentId="@history.DocumentId" asp-route-conversationId="@history.ConversationId">@history.Title</a>
+                    <small>@history.FileName · @history.MessageCount tin · @history.UpdatedAtUtc.ToLocalTime().ToString("dd/MM HH:mm")</small>
+                </div>
+                <form method="post" asp-page-handler="DeleteHistory" onsubmit="return confirm('Xóa lịch sử hội thoại này?')">
+                    <input type="hidden" asp-for="CourseId" />
+                    <input type="hidden" asp-for="DocumentId" />
+                    <input type="hidden" asp-for="ConversationId" />
+                    <input type="hidden" name="historyConversationId" value="@history.ConversationId" />
+                    <button title="Xóa lịch sử">×</button>
+                </form>
+            </div>
+        }
+        @if (!Model.Workspace.Histories.Any()) { <p class="sidebar-empty">Chưa có cuộc trò chuyện nào.</p> }
+        </div>
+    </section>
+    <section class="source-section">
+        <div><span class="eyebrow">TÀI LIỆU MÔN HỌC</span><h2>Nguồn tham khảo</h2><p class="source-help">Có thể chat ngay theo môn. Chọn file nếu muốn lọc riêng một tài liệu hoặc tải xuống.</p></div>
+        <div class="source-list">
+        <div class="source-document @(Model.DocumentId is null ? "active" : "")"><span>📚</span><div><a asp-page="/Student/Chat" asp-route-courseId="@Model.CourseId"><b>Toàn bộ tài liệu môn</b></a><small>Mặc định khi chat</small></div></div>
+        @foreach (var d in Model.Workspace.Documents) {
+            <div class="source-document @(Model.DocumentId == d.Id ? "active" : "")"><span>📄</span><div><a asp-page="/Student/Chat" asp-route-courseId="@Model.CourseId" asp-route-documentId="@d.Id"><b>@d.FileName</b></a><small>@d.UploadedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</small><div class="d-flex gap-2 mt-2"><a class="btn btn-sm btn-outline-secondary" asp-page-handler="File" asp-route-courseId="@Model.CourseId" asp-route-documentId="@d.Id">Tải xuống</a></div></div></div>
+        }
+        @if (!Model.Workspace.Documents.Any()) { <p class="text-muted">Chưa có tài liệu hoàn thành.</p> }
+        </div>
+    </section>
+}
+</aside>
+</div>
+@section Scripts { <script>
+const search=document.getElementById('courseSearch'); search?.addEventListener('input',e=>document.querySelectorAll('.course-nav').forEach(x=>x.hidden=!x.innerText.toLowerCase().includes(e.target.value.toLowerCase())));
+document.querySelectorAll('.suggestions button').forEach(b=>b.onclick=()=>{document.querySelector('[name=Question]').value=b.innerText;});
+const sc=document.getElementById('chatScroll'); if(sc) sc.scrollTop=sc.scrollHeight;
+document.getElementById('chatForm')?.addEventListener('submit',e=>{const b=e.currentTarget.querySelector('button'); b.disabled=true;b.innerHTML='<span class="spinner-border spinner-border-sm"></span>';});
+</script> }

@@ -1,0 +1,9 @@
+﻿Object-Oriented Programming (OOP) in C# is based on four core pillars: Encapsulation, Inheritance, Polymorphism, and Abstraction.
+Classes are reference types, while Structs are value types.
+Interfaces define a contract that implementing classes must fulfill.
+C# supports single class inheritance but multiple interface implementation.
+Common collections include:
+- List<T>: Dynamic array with fast index lookup.
+- Dictionary<TKey, TValue>: Key-value pairs with fast hash-based lookup.
+- HashSet<T>: Unordered collection of unique elements.
+Use LINQ (Language Integrated Query) for querying and transforming collections cleanly.

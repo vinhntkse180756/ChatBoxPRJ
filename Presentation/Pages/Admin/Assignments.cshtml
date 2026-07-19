@@ -1,0 +1,26 @@
+@page
+@using BusinessLogic.DTOs
+@model Presentation.Pages.Admin.AssignmentsModel
+@{ ViewData["Title"] = "Phân quyền"; }
+<div class="page-heading"><div><span class="eyebrow">COURSE ACCESS</span><h1>Phân quyền giảng viên – môn học</h1><p>Giảng viên thường được tải và chat; trưởng bộ môn có thêm quyền upload, kiểm tra và xóa tài liệu.</p></div></div>
+@if (Model.Flash is not null) { <div class="alert alert-@(Model.FlashType ?? "info")">@Model.Flash</div> }
+<section class="panel assignment-panel">
+    <form method="get" class="inline-form"><div><label>Chọn giảng viên</label><select asp-for="LecturerId" class="form-select" onchange="this.form.submit()"><option value="">— Chọn giảng viên —</option>@foreach (var u in Model.Lecturers) { <option value="@u.Id">@u.Code · @u.FullName</option> }</select></div></form>
+    @if (Model.LecturerId.HasValue) {
+    <form method="post"><input type="hidden" asp-for="LecturerId" /><div class="permission-grid">
+        @for (var index = 0; index < Model.Courses.Count; index++) {
+            var course = Model.Courses[index];
+            LecturerAccessLevel? current = Model.Current.TryGetValue(course.Id, out var accessLevel) ? accessLevel : null;
+            <article class="course-permission">
+                <input type="hidden" name="Permissions[@index].CourseId" value="@course.Id" />
+                <div><b>@course.Code</b><strong>@course.Name</strong><small>@course.Credits tín chỉ</small></div>
+                <select name="Permissions[@index].AccessLevel" class="form-select">
+                    <option value="">Không cấp quyền</option>
+                    <option value="@LecturerAccessLevel.Lecturer" selected="@(current == LecturerAccessLevel.Lecturer)">Giảng viên · tải tài liệu và chat</option>
+                    <option value="@LecturerAccessLevel.CourseHead" selected="@(current == LecturerAccessLevel.CourseHead)">Trưởng bộ môn · upload và quản lý</option>
+                </select>
+            </article>
+        }
+    </div><div class="action-bar"><span>@Model.Current.Count môn đang được cấp quyền</span><button class="btn btn-primary">Lưu phân quyền</button></div></form>
+    } else { <div class="empty-state compact"><span>↖</span><h2>Chọn giảng viên để bắt đầu</h2><p>Danh sách môn sẽ xuất hiện tại đây.</p></div> }
+</section>

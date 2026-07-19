@@ -1,0 +1,144 @@
+@page
+@model Presentation.Pages.Admin.StudentsModel
+@{ ViewData["Title"] = "Sinh viên & Gói"; }
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">STUDENT ACCOUNTS</span>
+        <h1>Theo dõi tài khoản sinh viên</h1>
+        <p>Xem gói đang dùng, số câu còn lại hôm nay và lịch sử thanh toán VNPay.</p>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.Flash))
+{
+    <div class="alert alert-@Model.FlashType" role="alert">@Model.Flash</div>
+}
+
+<div class="report-kpi-grid">
+    <div class="report-kpi"><span>Tổng SV</span><b>@Model.Dashboard.StudentCount</b></div>
+    <div class="report-kpi"><span>Free</span><b>@Model.Dashboard.FreeCount</b></div>
+    <div class="report-kpi"><span>Pro</span><b>@Model.Dashboard.ProCount</b><small>DT Pro: @Model.Dashboard.RevenuePro.ToString("N0")đ</small></div>
+    <div class="report-kpi accent"><span>Tổng doanh thu VNPay</span><b>@Model.Dashboard.RevenueTotal.ToString("N0")đ</b><small>Thanh toán hôm nay: @Model.Dashboard.PaidTodayCount</small></div>
+</div>
+
+<section class="panel grow mb-4">
+    <form method="get" class="admin-student-filter">
+        <div>
+            <label>Tìm kiếm</label>
+            <input class="form-control" name="Search" value="@Model.Search" placeholder="Mã / tên / email…" />
+        </div>
+        <div>
+            <label>Gói</label>
+            <select class="form-select" name="PackageFilter" asp-for="PackageFilter">
+                <option value="ALL">Tất cả</option>
+                <option value="FREE">Free</option>
+                <option value="PRO">Pro</option>
+            </select>
+        </div>
+        <div class="admin-student-filter-actions">
+            <button class="btn btn-primary" type="submit">Lọc</button>
+            <a class="btn btn-outline-secondary" asp-page="/Admin/Students">Xóa lọc</a>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="admin-student-table">
+            <thead>
+                <tr>
+                    <th>Sinh viên</th>
+                    <th>Gói</th>
+                    <th>Hôm nay</th>
+                    <th>Hết hạn</th>
+                    <th>Đã thanh toán</th>
+                    <th>Gán gói</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var s in Model.FilteredStudents)
+            {
+                <tr>
+                    <td>
+                        <b>@s.Code</b>
+                        <small>@s.FullName</small>
+                        <small class="muted">@s.Email</small>
+                    </td>
+                    <td>
+                        <span class="pkg-pill pkg-@s.PackageCode.ToLowerInvariant()">@s.PackageName</span>
+                        <small>@s.QuestionsPerDay câu/ngày</small>
+                    </td>
+                    <td>
+                        <b>@s.QuestionsRemainingToday</b>
+                        <small>còn / @s.QuestionsPerDay (đã dùng @s.QuestionsUsedToday)</small>
+                    </td>
+                    <td>
+                        @(s.EndsAtUtc is { } ends ? ends.ToLocalTime().ToString("dd/MM/yyyy") : "—")
+                    </td>
+                    <td>
+                        <b>@s.PaidOrderCount</b>
+                        <small>@s.PaidAmountTotal.ToString("N0")đ</small>
+                    </td>
+                    <td>
+                        <form method="post" asp-page-handler="Grant" class="grant-form">
+                            <input type="hidden" name="studentId" value="@s.UserId" />
+                            <input type="hidden" name="Search" value="@Model.Search" />
+                            <input type="hidden" name="PackageFilter" value="@Model.PackageFilter" />
+                            <select name="packageCode" class="form-select form-select-sm">
+                                <option value="FREE">Free</option>
+                                <option value="PRO">Pro</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline-primary" type="submit">Gán</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            @if (!Model.FilteredStudents.Any())
+            {
+                <tr><td colspan="6" class="text-muted">Không có sinh viên phù hợp bộ lọc.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel grow">
+    <h2>Thanh toán gần đây</h2>
+    <div class="table-responsive">
+        <table class="admin-student-table">
+            <thead>
+                <tr>
+                    <th>Mã đơn</th>
+                    <th>Sinh viên</th>
+                    <th>Gói</th>
+                    <th>Số tiền</th>
+                    <th>Trạng thái</th>
+                    <th>Thời gian</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var p in Model.Dashboard.RecentPayments)
+            {
+                <tr>
+                    <td><code>@p.OrderCode</code></td>
+                    <td><b>@p.StudentCode</b><small>@p.StudentName</small></td>
+                    <td>@p.PackageName</td>
+                    <td>@p.AmountVnd.ToString("N0")đ</td>
+                    <td>
+                        <span class="pay-status pay-@p.Status.ToLowerInvariant()">@p.Status</span>
+                        @if (!string.IsNullOrWhiteSpace(p.ProviderResponseCode))
+                        {
+                            <small>mã @p.ProviderResponseCode</small>
+                        }
+                    </td>
+                    <td>
+                        @(p.PaidAtUtc?.ToLocalTime().ToString("dd/MM HH:mm") ?? p.CreatedAtUtc.ToLocalTime().ToString("dd/MM HH:mm"))
+                    </td>
+                </tr>
+            }
+            @if (!Model.Dashboard.RecentPayments.Any())
+            {
+                <tr><td colspan="6" class="text-muted">Chưa có giao dịch.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>

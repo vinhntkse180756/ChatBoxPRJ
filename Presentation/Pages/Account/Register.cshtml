@@ -1,0 +1,15 @@
+@page
+@model Presentation.Pages.Account.RegisterModel
+@{ ViewData["Title"] = "Đăng ký sinh viên"; }
+<div class="auth-shell"><section class="auth-card wide">
+    <div class="eyebrow">TÀI KHOẢN SINH VIÊN</div><h1>Bắt đầu học cùng tài liệu</h1>
+    @if (Model.Message is not null) { <div class="alert alert-danger">@Model.Message</div> }
+    <form method="post" class="form-grid">
+        <div><label asp-for="Code">Mã sinh viên</label><input asp-for="Code" class="form-control" placeholder="SE123456" /><span asp-validation-for="Code"></span></div>
+        <div><label asp-for="FullName">Họ và tên</label><input asp-for="FullName" class="form-control" /><span asp-validation-for="FullName"></span></div>
+        <div><label asp-for="Email">Email</label><input asp-for="Email" class="form-control" /><span asp-validation-for="Email"></span></div>
+        <div><label asp-for="Password">Mật khẩu</label><input asp-for="Password" class="form-control" /><span asp-validation-for="Password"></span></div>
+        <div class="full"><button class="btn btn-primary btn-lg w-100">Tạo tài khoản sinh viên</button></div>
+    </form>
+    <p class="auth-foot">Đã có tài khoản? <a asp-page="/Account/Login">Đăng nhập</a></p>
+</section></div>

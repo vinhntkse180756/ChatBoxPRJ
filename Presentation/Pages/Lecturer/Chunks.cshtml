@@ -1,0 +1,25 @@
+@page
+@using BusinessLogic.DTOs
+@model Presentation.Pages.Lecturer.ChunksModel
+@{ ViewData["Title"] = "Chi tiết chunk"; }
+<div class="page-heading chunk-heading">
+    <div><span class="eyebrow">CHUNK INSPECTOR</span><h1>Các đoạn đã cắt</h1><p><b>@Model.Document.FileName</b> · @Model.Document.CourseName</p></div>
+    <a asp-page="/Lecturer/Documents" class="btn btn-outline-dark">← Quay lại tài liệu</a>
+</div>
+<section class="chunk-summary">
+    <div><b>@Model.Document.Chunks.Count</b><span>Tổng số chunk</span></div>
+    <div><b>@Model.Document.Chunks.Sum(x => x.WordCount)</b><span>Tổng lượt từ</span></div>
+    <div><b>@(Model.Document.Chunks.Count == 0 ? 0 : Math.Round(Model.Document.Chunks.Average(x => x.WordCount)))</b><span>Trung bình từ/chunk</span></div>
+    <div><span class="status @Model.Document.Status.ToString().ToLowerInvariant()">@Model.Document.Status</span><span>Trạng thái index</span></div>
+</section>
+<div class="chunk-toolbar"><input id="chunkSearch" class="form-control" placeholder="Tìm nội dung trong các chunk…"/><span>Mỗi đoạn mục tiêu 350 từ · overlap 50 từ</span></div>
+<section class="chunk-list" id="chunkList">
+@foreach (var chunk in Model.Document.Chunks) {
+    <article class="chunk-card">
+        <header><div><span class="chunk-number">Chunk #@chunk.ChunkNumber</span><span>Trang @chunk.PageNumber</span></div><b>@chunk.WordCount từ</b></header>
+        <p>@chunk.Content</p>
+    </article>
+}
+@if (!Model.Document.Chunks.Any()) { <div class="empty-state"><span>✂️</span><h2>Chưa có chunk</h2><p>Tài liệu chưa xử lý xong hoặc vector store ngoài không lưu bản sao chunk trong SQL.</p></div> }
+</section>
+@section Scripts { <script>document.getElementById('chunkSearch')?.addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.chunk-card').forEach(x=>x.hidden=!x.innerText.toLowerCase().includes(q));});</script> }

@@ -1,0 +1,7 @@
+﻿Windows Forms (WinForms) and WPF are two frameworks for building desktop applications in .NET.
+WinForms is event-driven and maps directly to Windows common controls. It is simple but has limited layout and styling flexibility.
+WPF (Windows Presentation Foundation) uses XAML for UI definition and supports data binding, MVVM pattern, and advanced styling.
+MVVM (Model-View-ViewModel) is the recommended architectural pattern for WPF:
+- Model: Represents the business data and logic.
+- View: The user interface defined in XAML.
+- ViewModel: Exposes data and commands to the View via Data Binding, separating UI from business logic.

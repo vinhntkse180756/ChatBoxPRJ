@@ -1,0 +1,121 @@
+================================================================================
+BỘ CÂU HỎI VÀ CÂU TRẢ LỜI DEMO (STUDYSPACE)
+================================================================================
+
+--------------------------------------------------------------------------------
+MÔN HỌC: PRN222 - Advanced Programming with .NET
+--------------------------------------------------------------------------------
+
+TÀI LIỆU: prn222-dependency-injection.txt
+--------------------------------------------------------------------------------
+Câu hỏi 1: Service lifetime Transient và Scoped trong ASP.NET Core khác nhau như thế nào?
+Trả lời:
+- Transient: Được tạo mỗi khi có yêu cầu (mỗi khi được request). Lý tưởng cho các dịch vụ nhẹ, không có trạng thái (stateless).
+- Scoped: Được tạo một lần duy nhất cho mỗi yêu cầu từ phía client (mỗi kết nối/connection). Hữu ích cho các dịch vụ giữ trạng thái trong phạm vi một yêu cầu, ví dụ như DbContext.
+
+Câu hỏi 2: Phương thức injection nào được khuyên dùng để yêu cầu các dependency trong .NET?
+Trả lời:
+Constructor injection (tiêm thông qua hàm khởi tạo) là phương thức được khuyên dùng để yêu cầu các dependency.
+
+Câu hỏi 3: Tại sao nên tránh sử dụng pattern Service Locator khi triển khai DI?
+Trả lời:
+Nên tránh sử dụng Service Locator vì pattern này che giấu các dependency (sự phụ thuộc) của lớp và làm cho việc viết unit test trở nên khó khăn hơn.
+
+--------------------------------------------------------------------------------
+TÀI LIỆU: prn222-ef-core-performance.txt
+--------------------------------------------------------------------------------
+Câu hỏi 1: Khi nào nên sử dụng phương thức AsNoTracking() trong truy vấn EF Core?
+Trả lời:
+Nên sử dụng AsNoTracking() cho các truy vấn chỉ đọc (read-only queries) nhằm loại bỏ chi phí giám sát sự thay đổi (change tracking overhead) của EF Core.
+
+Câu hỏi 2: Làm thế nào để giải quyết vấn đề truy vấn N+1 bằng Eager loading?
+Trả lời:
+Sử dụng Eager loading đi kèm với phương thức Include() để tải trước dữ liệu liên quan nhằm ngăn chặn vấn đề truy vấn N+1. Tuy nhiên cần lưu ý tránh tải quá nhiều dữ liệu liên quan không cần thiết.
+
+Câu hỏi 3: Từ phiên bản EF Core 7+, làm sao để cập nhật hoặc xóa dữ liệu hàng loạt mà không cần thông qua EF change tracker?
+Trả lời:
+Sử dụng các phương thức ExecuteUpdate() and ExecuteDelete() được giới thiệu từ phiên bản EF Core 7+ để cập nhật/xóa trực tiếp dưới cơ sở dữ liệu và bỏ qua hoàn toàn EF change tracker.
+
+
+--------------------------------------------------------------------------------
+MÔN HỌC: PRN211 - Basic Cross-Platform Application Development with .NET
+--------------------------------------------------------------------------------
+
+TÀI LIỆU: prn211-csharp-oop.txt
+--------------------------------------------------------------------------------
+Câu hỏi 1: Hãy nêu sự khác biệt cơ bản giữa Class và Struct trong ngôn ngữ C#?
+Trả lời:
+Class là kiểu tham chiếu (reference types), trong khi Struct là kiểu giá trị (value types).
+
+Câu hỏi 2: Các bộ sưu tập List, Dictionary và HashSet trong C# được tối ưu cho các mục đích sử dụng nào?
+Trả lời:
+- List<T>: Là mảng động được tối ưu cho việc tìm kiếm theo chỉ mục nhanh (fast index lookup).
+- Dictionary<TKey, TValue>: Là các cặp khóa-giá trị được tối ưu cho việc tìm kiếm nhanh dựa trên mã băm (fast hash-based lookup).
+- HashSet<T>: Là tập hợp không có thứ tự chứa các phần tử duy nhất.
+
+Câu hỏi 3: C# có hỗ trợ đa kế thừa đối với class không, và giải pháp thay thế là gì?
+Trả lời:
+C# chỉ hỗ trợ đơn kế thừa đối với lớp (single class inheritance). Giải pháp thay thế là triển khai nhiều giao diện (multiple interface implementation), do một lớp trong C# có thể triển khai nhiều giao diện cùng lúc.
+
+--------------------------------------------------------------------------------
+TÀI LIỆU: prn211-winforms-wpf.txt
+--------------------------------------------------------------------------------
+Câu hỏi 1: So sánh sự khác nhau cơ bản giữa Windows Forms và WPF trong lập trình desktop .NET?
+Trả lời:
+- WinForms: Hướng sự kiện (event-driven), ánh xạ trực tiếp đến các control thông thường của Windows, đơn giản nhưng bị giới hạn về tính linh hoạt trong bố cục và giao diện.
+- WPF: Sử dụng XAML để định nghĩa giao diện, hỗ trợ ràng buộc dữ liệu (data binding), mẫu thiết kế MVVM và cung cấp khả năng tùy biến giao diện/bố cục nâng cao.
+
+Câu hỏi 2: Pattern MVVM hoạt động như thế nào và vai trò của ViewModel là gì?
+Trả lời:
+Mẫu thiết kế MVVM chia ứng dụng thành 3 phần chính:
+- Model: Đại diện cho dữ liệu nghiệp vụ và logic.
+- View: Giao diện người dùng được định nghĩa bằng XAML.
+- ViewModel: Đóng vai trò cầu nối, cung cấp dữ liệu và lệnh (commands) cho View thông qua Data Binding, giúp tách biệt UI hoàn toàn khỏi logic nghiệp vụ.
+
+Câu hỏi 3: Thành phần View và ViewModel trong WPF liên kết dữ liệu với nhau bằng cách nào?
+Trả lời:
+View và ViewModel liên kết dữ liệu với nhau thông qua cơ chế Ràng buộc dữ liệu (Data Binding) trong WPF.
+
+
+--------------------------------------------------------------------------------
+MÔN HỌC: SWT301 - Software Testing
+--------------------------------------------------------------------------------
+
+TÀI LIỆU: swt301-testing-methodologies.txt
+--------------------------------------------------------------------------------
+Câu hỏi 1: Có những cấp độ kiểm thử phần mềm nào được đề cập trong tài liệu?
+Trả lời:
+Các cấp độ kiểm thử bao gồm:
+1. Unit Testing (Kiểm thử đơn vị): Xác minh phần nhỏ nhất có thể kiểm thử được của ứng dụng (phương thức, lớp).
+2. Integration Testing (Kiểm thử tích hợp): Xác minh xem các thành phần/mô-đun khác nhau có hoạt động cùng nhau một cách chính xác hay không.
+3. System Testing (Kiểm thử hệ thống): Xác minh toàn bộ hệ thống đã được tích hợp hoàn chỉnh dựa trên các yêu cầu đã đặc tả.
+4. Acceptance Testing (Kiểm thử chấp nhận): Xác minh xem hệ thống có đáp ứng được nhu cầu của người dùng và sẵn sàng triển khai hay không.
+
+Câu hỏi 2: Kiểm thử hộp đen (Black-box) và kiểm thử hộp trắng (White-box) tập trung vào khía cạnh nào của phần mềm?
+Trả lời:
+- Kiểm thử hộp đen (Black-box testing): Tập trung vào đầu vào/đầu ra (inputs/outputs) của hệ thống mà không cần biết cấu trúc bên trong.
+- Kiểm thử hộp trắng (White-box testing): Tập trung vào việc kiểm tra và phân tích cấu trúc mã nguồn bên trong của phần mềm.
+
+Câu hỏi 3: Phân biệt mục đích giữa kiểm thử tích hợp (Integration Testing) và kiểm thử hệ thống (System Testing)?
+Trả lời:
+- Kiểm thử tích hợp tập trung xác minh sự phối hợp và giao tiếp giữa các mô-đun/thành phần đơn lẻ hoạt động cùng nhau.
+- Kiểm thử hệ thống tập trung xác minh toàn bộ hệ thống sau khi đã tích hợp đầy đủ có đáp ứng đúng các yêu cầu đặc tả ban đầu hay không.
+
+--------------------------------------------------------------------------------
+TÀI LIỆU: swt301-xunit-mocking.txt
+--------------------------------------------------------------------------------
+Câu hỏi 1: Trong xUnit, thuộc tính [Fact] và [Theory] khác nhau như thế nào?
+Trả lời:
+- [Fact]: Dành cho các bài kiểm thử tiêu chuẩn, cố định và không nhận vào các tham số đầu vào.
+- [Theory]: Dành cho các bài kiểm thử hướng dữ liệu, nhận tham số đầu vào để chạy kiểm thử nhiều lần với các tập dữ liệu khác nhau (thường đi kèm thuộc tính [InlineData]).
+
+Câu hỏi 2: Kỹ thuật Mocking là gì và thư viện Moq hỗ trợ thiết lập hành vi giả lập bằng cú pháp nào?
+Trả lời:
+Mocking là kỹ thuật dùng để cô lập hệ thống đang được kiểm thử (SUT) bằng cách thay thế các phụ thuộc bên ngoài bằng các đối tượng giả lập. Thư viện Moq hỗ trợ thiết lập hành vi giả lập qua các bước:
+- Khởi tạo mock: `var mockRepo = new Mock<IRepository>();`
+- Thiết lập hành vi: `mockRepo.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(new Entity());`
+- Xác minh tương tác: `mockRepo.Verify(x => x.SaveAsync(), Times.Once());`
+
+Câu hỏi 3: Làm thế nào để kiểm tra (assert) xem một đoạn mã có ném ra một ngoại lệ mong muốn trong xUnit hay không?
+Trả lời:
+Sử dụng cú pháp: `Assert.ThrowsAsync<ExpectedException>(() => action());` (ví dụ `Assert.ThrowsAsync<ArgumentException>(...)`) để xác nhận xem ngoại lệ mong muốn có được ném ra hay không.
