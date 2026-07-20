@@ -1,0 +1,58 @@
+# Asynchronous and Parallel Programming in .NET
+
+## 1. Introduction to Parallel Computing
+- **Mono-Processor Systems**: Use classic John von Neumann computer architecture (1952). The processor receives an input stream, executes processes, and sends output. It runs one task at a time (Single Instruction, Single Data - SISD). A key limitation is the **von Neumann bottleneck** (data transfer delay).
+- **Multiprocessor Systems**: Multiple processors solve the von Neumann bottleneck. Task distribution methods include:
+  - **Symmetrical Multiprocessing (SMP)**: Any available processor or core executes any task (efficient n-way multiprocessing). Each processor runs tasks isolated from others.
+  - **Asymmetrical Multiprocessing (AMP/ASMP)**: One main processor acts as a manager to distribute tasks to other available processors using specific algorithms.
+- **Multiple Core Processors**: A multi-core CPU has more than one physical processing unit sharing the same memory cache.
+- **Hyper-Threading (HT)**: Proprietary technology by Intel (first in Xeon, 2002) allowing a single processor chip to run with two virtual (logical) cores, executing two tasks at a time. Only one logical core per physical core executes a software instruction at any given instant.
+
+## 2. Flynn's Taxonomy
+Flynn classifies computer architectures into four categories based on concurrent instruction/control and data streams:
+1. **Single Instruction, Single Data (SISD)**: A single control unit and single instruction stream. Executes one instruction at a time. All single-core processors are SISD.
+2. **Single Instruction, Multiple Data (SIMD)**: A single instruction stream applied to multiple data streams in parallel. Often used in speculative approach scenarios with multiple algorithms.
+3. **Multiple Instructions, Single Data (MISD)**: Multiple instructions operate on a single data stream. Used for fault tolerance (e.g., space shuttle flight control computers).
+4. **Multiple Instructions, Multiple Data (MIMD)**: Multiple instruction streams and multiple data streams achieving true parallelism. Used by most modern computer systems.
+
+## 3. Serial vs. Parallel Computing
+- **Serial Computing**: A problem is broken into a discrete series of instructions executed sequentially on a single processor. Only one instruction executes at any moment.
+- **Parallel Computing**: Simultaneous use of multiple compute resources. A problem is broken into discrete parts solved concurrently, executing instructions simultaneously on different processors.
+  - *Types of Parallelism*: Bit-level, Instruction-level, Data-level (DLP), Task Parallelism.
+  - *Limitations*: Difficult communication/synchronization between sub-tasks, requires low coupling & high cohesion, and requires highly skilled programmers.
+
+## 4. Parallel Programming in .NET (.NET 4+)
+- **Task Parallel Library (TPL)**: Public types and APIs in `System.Threading` and `System.Threading.Tasks`. Handles dynamic concurrency scaling, work partitioning, thread scheduling on the ThreadPool, cancellation support, and state management.
+- **System.Threading.Tasks Key Classes**:
+  - `Parallel`: Support for parallel loops (`Parallel.For`, `Parallel.ForEach`) and regions.
+  - `Task`: Represents an asynchronous operation (TAP pattern, runs on ThreadPool, non-generic does not return a value).
+  - `Task<TResult>`: Generic task representing an asynchronous operation returning a value.
+  - `TaskFactory` / `TaskFactory<TResult>`: Creates and starts Task objects.
+  - `TaskScheduler`: Handles low-level queuing of tasks onto threads.
+  - `TaskCompletionSource`: Producer side of a Task unbound to a delegate.
+- **Task Creation Methods**: Lambda expressions (`Task.Run(() => ...)`), Action delegate, or anonymous delegate syntax.
+- **Task Control Methods**: `Start()`, `Wait()`, `WaitAll()`, `WhenAll()`, and `ContinueWith()`.
+
+## 5. Parallel LINQ (PLINQ)
+- **PLINQ**: Parallel implementation of the LINQ pattern (extension methods in `System.Linq` under `ParallelEnumerable`). Combines simplicity of LINQ with parallel programming.
+- **How it works**: Partitions the data source into segments and executes queries on each segment on separate worker threads in parallel. Deferred execution applies (starts when enumerated).
+- **ParallelEnumerable Key Operators**:
+  - `AsParallel()`: Entry point for PLINQ to parallelize a query if possible.
+  - `AsSequential()`: Runs the rest of the query sequentially.
+  - `AsOrdered()`: Preserves the ordering of the source sequence.
+  - `AsUnordered()`: Does not require preserving order (faster).
+  - `ForAll()`: Multithreaded enumeration bypassing merging back to the consumer thread.
+  - `WithDegreeOfParallelism()`: Specifies max processors/cores to use.
+- **PLINQ Disadvantages**:
+  - Partitioning and merging add overhead; parallel is not always faster for small collections.
+  - Avoid thread-unsafe atomic/IO operations (writing to database/files/network) inside PLINQ.
+  - Core CLR decides whether to run in parallel; `AsParallel()` does not guarantee parallel execution.
+
+## 6. Asynchronous Programming in .NET
+- **Synchronous Execution**: Control stays on the calling thread, executing line-by-line while blocking.
+- **Asynchronous Model**: Executes multiple tasks concurrently. The called method runs in the background and returns control immediately. Supports I/O-bound and compute-bound operations.
+- **Historical Patterns**:
+  - **Asynchronous Programming Model (APM)**: Uses `BeginInvoke`/`EndInvoke` (Not supported in .NET Core).
+  - **Event-Based Asynchronous Pattern (EAP)**: Event-driven (e.g., `DownloadStringAsync` + `DownloadStringCompleted` event).
+  - **Task-Based Asynchronous Pattern (TAP)**: Modern standard using `async` and `await` keywords returning `Task` or `Task<T>`.
+- **Async/Await Keywords**: Heart of asynchronous programming in C#. The calling method yields control at `await` and resumes when the awaited task completes.

@@ -1,7 +1,328 @@
 @page
 @model Presentation.Pages.Admin.LecturersModel
 @{ ViewData["Title"] = "Giảng viên"; }
-<div class="page-heading"><div><span class="eyebrow">IDENTITY & ACCESS</span><h1>Quản lý giảng viên</h1><p>Quyền upload chỉ có sau khi được gán làm trưởng bộ môn.</p></div></div>
-@if(Model.Flash is not null){<div class="alert alert-@(Model.FlashType ?? "info")" role="alert">@Model.Flash</div>}
-<div class="split-layout"><section class="panel"><h2>Cấp tài khoản mới</h2><form method="post" class="form-stack"><label>Mã giảng viên</label><input asp-for="Code" class="form-control"/><label>Họ tên</label><input asp-for="FullName" class="form-control"/><label>Email</label><input asp-for="Email" class="form-control"/><label>Mật khẩu</label><input asp-for="Password" type="password" class="form-control"/><button class="btn btn-primary">Tạo giảng viên</button></form></section>
-<section class="panel grow"><h2>Danh sách giảng viên</h2>@foreach(var u in Model.Lecturers){<form method="post" asp-page-handler="Update" class="form-stack border rounded p-3 mb-3"><input type="hidden" name="EditId" value="@u.Id"/><div class="row g-2"><div class="col-md-2"><input name="Code" value="@u.Code" class="form-control"/></div><div class="col-md-3"><input name="FullName" value="@u.FullName" class="form-control"/></div><div class="col-md-4"><input name="Email" value="@u.Email" class="form-control"/></div><div class="col-md-3"><input name="Password" type="password" placeholder="Mật khẩu mới (tùy chọn)" class="form-control"/></div></div><div class="d-flex gap-2"><button class="btn btn-outline-primary">Lưu sửa đổi</button><button class="btn btn-outline-danger" formaction="?handler=Delete&id=@u.Id" onclick="return confirm('Xóa giảng viên và các tài liệu do người này tải lên?')">Xóa</button></div></form>}</section></div>
+
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">IDENTITY &amp; ACCESS</span>
+        <h1>Quản lý giảng viên</h1>
+        <p>Quyền upload chỉ có sau khi được gán làm trưởng bộ môn.</p>
+    </div>
+    <button class="btn btn-primary" id="btnOpenModal">+ Cấp tài khoản mới</button>
+</div>
+
+@if (Model.Flash is not null)
+{
+    <div class="alert alert-@(Model.FlashType ?? "info")" role="alert">@Model.Flash</div>
+}
+
+<div class="lec-toolbar">
+    <div class="lec-search-wrap">
+        <span class="lec-search-icon">🔍</span>
+        <input id="lecSearch" type="search" placeholder="Tìm theo tên, mã GV hoặc email..." class="lec-search-input" />
+    </div>
+    <span class="count-pill" id="lecCount">@Model.Lecturers.Count giảng viên</span>
+</div>
+
+@if (!Model.Lecturers.Any())
+{
+    <div class="empty-state compact panel" style="margin-top:12px;">
+        <span>🎓</span>
+        <h3>Chưa có giảng viên nào</h3>
+        <p>Bấm <b>Cấp tài khoản mới</b> để tạo giảng viên đầu tiên.</p>
+    </div>
+}
+else
+{
+    <div class="lec-card-grid" id="lecGrid">
+    @foreach (var u in Model.Lecturers)
+    {
+        var initials = string.Join("", u.FullName.Split(' ', System.StringSplitOptions.RemoveEmptyEntries)
+                                       .TakeLast(2).Select(w => w[0]));
+        <div class="lec-card" data-search="@u.FullName.ToLower() @u.Code.ToLower() @u.Email.ToLower()">
+            <div class="lec-card-top">
+                <div class="lec-avatar">@initials</div>
+                <div class="lec-card-meta">
+                    <b>@u.FullName</b>
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                        <span class="lec-code-badge">@u.Code</span>
+                        <span class="lec-email-text">@u.Email</span>
+                    </div>
+                </div>
+            </div>
+            <form method="post" asp-page-handler="Update" class="lec-edit-form">
+                <input type="hidden" name="EditId" value="@u.Id" />
+                <div class="lec-fields">
+                    <div class="lec-field">
+                        <label>Mã GV</label>
+                        <input name="Code" value="@u.Code" class="form-control" />
+                    </div>
+                    <div class="lec-field">
+                        <label>Họ tên</label>
+                        <input name="FullName" value="@u.FullName" class="form-control" />
+                    </div>
+                    <div class="lec-field lec-field-wide">
+                        <label>Email</label>
+                        <input name="Email" value="@u.Email" class="form-control" type="email" />
+                    </div>
+                </div>
+                <div class="lec-card-actions">
+                    <button class="btn lec-save-btn" type="submit">💾 Lưu sửa đổi</button>
+                    <button class="btn lec-delete-btn"
+                            formaction="?handler=Delete&id=@u.Id"
+                            onclick="return confirm('Xóa giảng viên này và toàn bộ tài liệu do người này tải lên?')">
+                        🗑 Xóa
+                    </button>
+                </div>
+            </form>
+        </div>
+    }
+    </div>
+    <div id="lecNoResult" style="display:none;" class="empty-state compact panel" style="margin-top:12px;">
+        <span>🔎</span>
+        <h3>Không tìm thấy kết quả</h3>
+        <p>Thử tìm bằng tên, mã GV hoặc email khác.</p>
+    </div>
+}
+
+<div id="lecModal" class="lec-modal-backdrop" style="display:none;" aria-modal="true" role="dialog">
+    <div class="lec-modal">
+        <div class="lec-modal-header">
+            <div>
+                <span class="eyebrow">IDENTITY &amp; ACCESS</span>
+                <h2>Cấp tài khoản mới</h2>
+            </div>
+            <button class="lec-modal-close" id="btnCloseModal" aria-label="Đóng">&times;</button>
+        </div>
+        <form method="post" class="form-stack">
+            <label>Mã giảng viên</label>
+            <input asp-for="Code" class="form-control" placeholder="VD: GV001" />
+            <label>Họ tên</label>
+            <input asp-for="FullName" class="form-control" placeholder="VD: Nguyễn Văn A" />
+            <label>Email</label>
+            <input asp-for="Email" class="form-control" type="email" placeholder="email@fpt.edu.vn" />
+            <label>Mật khẩu</label>
+            <input asp-for="Password" type="password" class="form-control" placeholder="Tối thiểu 6 ký tự" />
+            <div style="display:flex;gap:10px;margin-top:4px;">
+                <button class="btn btn-primary" type="submit" style="flex:1;">Tạo giảng viên</button>
+                <button class="btn" type="button" id="btnCancelModal"
+                        style="flex:1;background:#f2f5f2;border:1px solid var(--line);color:var(--ink);">
+                    Hủy
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<style>
+/* Toolbar */
+.lec-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+.lec-search-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 0 14px;
+    box-shadow: 0 2px 8px rgba(20,40,30,.04);
+    transition: border-color .18s, box-shadow .18s;
+}
+.lec-search-wrap:focus-within {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(23,107,82,.1);
+}
+.lec-search-icon { font-size: 1rem; color: var(--muted); }
+.lec-search-input {
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    padding: 11px 0;
+    font-size: .9rem;
+    color: var(--ink);
+}
+.lec-search-input::placeholder { color: #9baaa3; }
+
+/* Card grid */
+.lec-card-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.lec-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 22px;
+    box-shadow: 0 4px 16px rgba(20,40,30,.04);
+    transition: box-shadow .18s, border-color .18s;
+}
+.lec-card:hover {
+    border-color: #b3d3c7;
+    box-shadow: 0 8px 28px rgba(23,107,82,.08);
+}
+.lec-card-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+}
+.lec-avatar {
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    border-radius: 12px;
+    background: var(--green);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 1rem;
+    text-transform: uppercase;
+}
+.lec-card-meta { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.lec-card-meta b { font-size: 1rem; }
+.lec-code-badge {
+    display: inline-block;
+    background: var(--green2);
+    color: var(--green);
+    font-size: .72rem;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 999px;
+}
+.lec-email-text { font-size: .78rem; color: var(--muted); }
+.lec-fields {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr 1.8fr;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.lec-field label {
+    display: block;
+    font-size: .72rem;
+    font-weight: 800;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 5px;
+}
+.lec-card-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.lec-save-btn {
+    background: var(--green2); color: var(--green);
+    border: 1px solid #b3d9c8; font-weight: 700;
+    font-size: .82rem; padding: 7px 16px; border-radius: 8px;
+}
+.lec-save-btn:hover { background: var(--green); color: #fff; border-color: var(--green); }
+.lec-delete-btn {
+    background: #fff5f5; color: var(--red);
+    border: 1px solid #f0c2c0; font-weight: 700;
+    font-size: .82rem; padding: 7px 16px; border-radius: 8px;
+}
+.lec-delete-btn:hover { background: var(--red); color: #fff; border-color: var(--red); }
+
+/* Modal */
+.lec-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(18,32,29,.45);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(3px);
+    animation: fadeIn .18s ease;
+}
+.lec-modal {
+    background: #fff;
+    border-radius: 18px;
+    padding: 32px 30px 28px;
+    width: min(460px, 100%);
+    box-shadow: 0 24px 60px rgba(10,30,20,.22);
+    animation: slideUp .2s ease;
+}
+.lec-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 22px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+}
+.lec-modal-header h2 { margin: 4px 0 0; font-size: 1.2rem; }
+.lec-modal-close {
+    background: none;
+    border: 0;
+    font-size: 1.6rem;
+    line-height: 1;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 0 4px;
+    transition: color .15s;
+}
+.lec-modal-close:hover { color: var(--ink); }
+@@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@@keyframes slideUp { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+@@media (max-width: 960px) {
+    .lec-fields { grid-template-columns: 1fr 1fr; }
+}
+@@media (max-width: 600px) {
+    .lec-fields { grid-template-columns: 1fr; }
+    .lec-toolbar { flex-wrap: wrap; }
+}
+</style>
+
+<script>
+// Modal open/close
+const modal   = document.getElementById('lecModal');
+const btnOpen = document.getElementById('btnOpenModal');
+const btnClose = document.getElementById('btnCloseModal');
+const btnCancel = document.getElementById('btnCancelModal');
+
+function openModal()  { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+function closeModal() { modal.style.display = 'none';  document.body.style.overflow = ''; }
+
+if (btnOpen)   btnOpen.addEventListener('click', openModal);
+if (btnClose)  btnClose.addEventListener('click', closeModal);
+if (btnCancel) btnCancel.addEventListener('click', closeModal);
+modal?.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// Auto-open modal on validation error (Flash = danger after failed POST)
+@if (Model.Flash is not null && Model.FlashType == "danger")
+{
+    <text>openModal();</text>
+}
+
+// Search
+const searchInput = document.getElementById('lecSearch');
+const grid        = document.getElementById('lecGrid');
+const noResult    = document.getElementById('lecNoResult');
+const countPill   = document.getElementById('lecCount');
+
+searchInput?.addEventListener('input', () => {
+    const q = searchInput.value.toLowerCase().trim();
+    const cards = grid?.querySelectorAll('.lec-card') ?? [];
+    let visible = 0;
+    cards.forEach(card => {
+        const match = !q || card.dataset.search.includes(q);
+        card.style.display = match ? '' : 'none';
+        if (match) visible++;
+    });
+    if (countPill) countPill.textContent = visible + ' giảng viên';
+    if (noResult) noResult.style.display = (visible === 0 && q) ? '' : 'none';
+});
+</script>
+}

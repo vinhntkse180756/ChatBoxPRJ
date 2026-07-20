@@ -105,7 +105,7 @@ public sealed class BenchmarkService(
 
         var models = selectedModels != null && selectedModels.Count > 0
             ? selectedModels
-            : new[] { aiOptions.ChatModel ?? "gemini-2.5-flash" };
+            : new[] { aiOptions.ChatModel ?? "gemini-3.1-flash-lite" };
 
         run.ModelName = string.Join(", ", models);
 

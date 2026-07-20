@@ -2,44 +2,220 @@
 @using BusinessLogic.DTOs
 @model Presentation.Pages.Lecturer.DocumentsModel
 @{ ViewData["Title"] = "Kho tài liệu"; }
-<div class="page-heading"><div><span class="eyebrow">COURSE DOCUMENTS</span><h1>Tài liệu môn học</h1><p>Quyền thao tác được áp dụng theo phân công của quản trị viên trên từng môn.</p></div></div>
+<div class="page-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 16px;">
+    <div>
+        <span class="eyebrow">COURSE DOCUMENTS</span>
+        <h1>Tài liệu môn học</h1>
+        <p>Quyền thao tác được áp dụng theo phân công của quản trị viên trên từng môn.</p>
+    </div>
+    @if (Model.UploadCourses.Any()) {
+        <button id="openUploadModalBtn" class="btn btn-primary" style="border-radius: 10px; font-weight: 600; padding: 10px 20px; font-size: 0.95rem; background: var(--green); border: none; box-shadow: 0 4px 12px rgba(23,107,82,0.18); display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <span>📥</span> Thêm tài liệu mới
+        </button>
+    }
+</div>
+
 @if (Model.Flash is not null) { <div class="alert alert-@(Model.FlashType ?? "info")" role="alert">@Model.Flash</div> }
 <div class="alert" id="documentNotification" role="alert" hidden></div>
-<div class="document-layout">
+
 @if (Model.UploadCourses.Any()) {
-<aside class="panel upload-panel"><h2>Bắt đầu xử lý</h2>
-<form method="post" enctype="multipart/form-data" asp-page-handler="Upload" class="form-stack" id="uploadForm">
-    <label asp-for="UploadCourseId">Môn được cấp quyền upload</label><select asp-for="UploadCourseId" class="form-select" required><option value="">— Chọn môn —</option>@foreach (var c in Model.UploadCourses) { <option value="@c.Id">@c.Code · @c.Name</option> }</select>
-    <label class="drop-zone"><span class="drop-icon">⇧</span><b>Chọn PDF, DOCX hoặc TXT</b><small>Tối đa 100 MB · PDF scan ảnh sẽ bị từ chối</small><input asp-for="UploadFile" accept=".pdf,.docx,.txt" required /></label>
-    <label class="switch-row"><input asp-for="Overwrite" /><span>Ghi đè nếu trùng tên nhưng khác nội dung</span></label>
-    <label asp-for="ChunkingStrategy">Chiến thuật Chunking</label>
-    <select asp-for="ChunkingStrategy" class="form-select">
-        <option value="WordCount">Fixed Word Count (mặc định)</option>
-        <option value="Sentence">Sentence-based (theo câu)</option>
-        <option value="Paragraph">Paragraph-based (theo đoạn)</option>
-    </select>
-    <label asp-for="EmbeddingModel">Mô hình Embedding</label>
-    <select asp-for="EmbeddingModel" class="form-select">
-        <option value="gemini-embedding-001">gemini-embedding-001 (Gemini)</option>
-        <option value="text-embedding-3-small">text-embedding-3-small (GitHub/OpenAI)</option>
-        <option value="Local">Local Hash (không cần API)</option>
-    </select>
-    <button class="btn btn-primary btn-lg" id="uploadButton">Bắt đầu xử lý</button>
-</form>
-<div class="upload-progress" id="uploadProgress" hidden>
-    <div class="progress-copy"><b id="uploadProgressText">Đang upload…</b><span id="uploadPercent">0%</span></div>
-    <div class="progress-track"><i id="uploadProgressBar"></i></div>
-</div>
-<div class="pipeline-note"><b>Pipeline</b><span>SHA-256 → Extract → Chunk → Embed → Index</span></div></aside>
-} else if (Model.CourseId.HasValue) {
-<aside class="panel access-panel"><span class="eyebrow">QUYỀN HIỆN TẠI</span><h2>Giảng viên môn học</h2><p>Bạn có thể tải tài liệu hoàn thành và dùng chatbox. Chỉ trưởng bộ môn mới được upload, kiểm tra chunk hoặc xóa tài liệu.</p><a class="btn btn-outline-primary" asp-page="/Student/Chat" asp-route-courseId="@Model.CourseId">Mở chatbox</a></aside>
+    <div id="uploadModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px); align-items: center; justify-content: center;">
+        <div class="panel upload-panel" style="position: relative; border-radius: 16px; padding: 28px; background: #fff; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 1px solid var(--line); width: min(460px, 90%); margin: auto; animation: modalFadeIn 0.3s ease;">
+            <span id="closeUploadModalBtn" style="position: absolute; right: 20px; top: 16px; font-size: 1.5rem; font-weight: bold; color: var(--muted); cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">&times;</span>
+            <h2 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 20px; color: var(--ink); display: flex; align-items: center; gap: 8px; margin-top: 0;">
+                <span style="font-size: 1.5rem;">📥</span> Tải lên tài liệu
+            </h2>
+            <form method="post" enctype="multipart/form-data" asp-page-handler="Upload" class="form-stack" id="uploadForm">
+                <div style="margin-bottom: 14px;">
+                    <label asp-for="UploadCourseId" style="font-size: 0.82rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: block;">Môn được cấp quyền upload</label>
+                    <select asp-for="UploadCourseId" class="form-select" style="border-radius: 10px; padding: 10px 12px; font-size: 0.9rem;" required>
+                        <option value="">— Chọn môn học —</option>
+                        @foreach (var c in Model.UploadCourses) { 
+                            <option value="@c.Id">@c.Code · @c.Name</option> 
+                        }
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 14px;">
+                    <label class="drop-zone" id="dragDropArea" style="border: 2px dashed #a4bfae; border-radius: 12px; padding: 32px 16px; text-align: center; display: flex !important; flex-direction: column; align-items: center; cursor: pointer; background: #fbfdfc; transition: all 0.2s ease;">
+                        <span class="drop-icon" style="font-size: 2.2rem; margin-bottom: 8px; transition: transform 0.2s ease;">📤</span>
+                        <b style="font-size: 0.95rem; color: var(--ink);">Kéo thả file vào đây</b>
+                        <span style="font-size: 0.85rem; color: var(--muted); margin: 4px 0 8px;">hoặc nhấn để duyệt file</span>
+                        <small style="font-size: 0.72rem; color: var(--muted); font-weight: 400; background: #eef4f0; padding: 3px 8px; border-radius: 6px;">PDF, DOCX, TXT (Tối đa 100 MB)</small>
+                        <input asp-for="UploadFile" accept=".pdf,.docx,.txt" style="display: none;" required id="fileInput" />
+                    </label>
+                    <div id="fileSelectedInfo" style="display: none; align-items: center; gap: 8px; margin-top: 8px; padding: 8px 12px; background: #eef7f2; border: 1px solid #c7e2d4; border-radius: 8px; font-size: 0.82rem; color: var(--green);">
+                        <span>📄</span> <strong id="selectedFileName" style="word-break: break-all; flex: 1;"></strong>
+                        <span id="removeFileBtn" style="cursor: pointer; font-weight: bold; font-size: 1.1rem; color: var(--red); padding: 0 4px;">&times;</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 14px;">
+                    <label class="switch-row" style="display: flex; align-items: center; gap: 10px; font-size: 0.85rem; cursor: pointer; user-select: none; color: var(--ink); font-weight: 500;">
+                        <input asp-for="Overwrite" style="width: 16px; height: 16px; accent-color: var(--green);" />
+                        <span>Ghi đè nếu trùng tên file</span>
+                    </label>
+                </div>
+
+                <div style="margin-bottom: 14px;">
+                    <label asp-for="ChunkingStrategy" style="font-size: 0.82rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: block;">Chiến thuật Chunking</label>
+                    <select asp-for="ChunkingStrategy" class="form-select" style="border-radius: 10px; padding: 10px 12px; font-size: 0.9rem;">
+                        <option value="WordCount">Fixed Word Count (Mặc định)</option>
+                        <option value="Sentence">Sentence-based (Theo câu)</option>
+                        <option value="Paragraph">Paragraph-based (Theo đoạn)</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label asp-for="EmbeddingModel" style="font-size: 0.82rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: block;">Mô hình Embedding</label>
+                    <select asp-for="EmbeddingModel" class="form-select" style="border-radius: 10px; padding: 10px 12px; font-size: 0.9rem;">
+                        <option value="gemini-embedding-001">gemini-embedding-001 (Gemini)</option>
+                        <option value="text-embedding-3-small">text-embedding-3-small (OpenAI)</option>
+                        <option value="Local">Local Hash (Offline / Test)</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-primary btn-lg" id="uploadButton" style="width: 100%; border-radius: 10px; font-weight: 600; padding: 12px; font-size: 0.95rem; background: var(--green); border: none; box-shadow: 0 4px 12px rgba(23,107,82,0.18); transition: all 0.2s;">Bắt đầu xử lý</button>
+            </form>
+            <div class="upload-progress" id="uploadProgress" style="margin-top: 16px; padding: 14px; background: #f6f8f6; border-radius: 12px; border: 1px solid var(--line);" hidden>
+                <div class="progress-copy" style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600;"><b id="uploadProgressText" style="color: var(--green);">Đang upload…</b><span id="uploadPercent" style="color: var(--green);">0%</span></div>
+                <div class="progress-track" style="height: 8px; margin-top: 8px; border-radius: 99px; background: #e0e6e2; overflow: hidden;"><i id="uploadProgressBar" style="display: block; width: 0%; height: 100%; border-radius: inherit; background: var(--green); transition: width 0.1s ease;"></i></div>
+            </div>
+            <div class="pipeline-note" style="margin-top: 20px; padding: 12px; background: #f6f8f5; border-radius: 10px; border: 1px solid var(--line); font-size: 0.75rem; color: var(--muted);">
+                <strong style="color: var(--ink); display: block; margin-bottom: 4px;">Pipeline xử lý tự động:</strong>
+                SHA-256 &rarr; Extract Text &rarr; Chunking &rarr; Embedding &rarr; Vector Indexing
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        @@keyframes modalFadeIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
 }
-<section class="panel grow"><div class="panel-title"><div><h2>Tài liệu được cấp quyền</h2><p>@(Model.CanManageCourse ? "Theo dõi và quản lý toàn bộ trạng thái xử lý." : "Chỉ hiển thị tài liệu đã xử lý thành công.")</p></div><form method="get"><select asp-for="CourseId" class="form-select" onchange="this.form.submit()"><option value="">— Chọn môn —</option>@foreach (var c in Model.Courses) { <option value="@c.Id">@c.Code</option> }</select></form></div>
-@foreach (var d in Model.Documents) { var cls = d.Status.ToString().ToLowerInvariant(); var statusLabel = d.Status switch { DocumentStatus.Completed => "Thành công", DocumentStatus.Failed => "Bị từ chối", _ => "Đang xử lý" }; <tr data-document-id="@d.Id" data-file-name="@d.FileName"><td><div class="file-cell"><span>📄</span><div><b>@d.FileName</b>@if (d.FailureReason is not null) { <small class="rejection-reason" title="@d.FailureReason"><strong>Lý do từ chối:</strong> @d.FailureReason</small> }</div></div></td><td>@d.CourseName</td><td>@d.UploadedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td><td><small title="Chiến thuật Chunking">✂️ @d.ChunkingStrategy</small><br/><small title="Mô hình Embedding">🔢 @d.EmbeddingModel</small></td><td><span class="status @cls">@statusLabel</span>@if (d.Status == DocumentStatus.Processing) { <div class="processing-progress"><div class="progress-copy"><small class="processing-message">Đang chờ cập nhật…</small><b class="processing-percent">0%</b></div><div class="progress-track"><i></i></div></div> }</td><td><div class="row-actions">@if (d.Status == DocumentStatus.Completed) { <a class="icon-btn" asp-page-handler="File" asp-route-documentId="@d.Id" asp-route-courseId="@d.CourseId" title="Tải tài liệu">⇩</a> @if (Model.CanManageCourse) { <a class="icon-btn" asp-page="/Lecturer/Chunks" asp-route-documentId="@d.Id" title="Xem các đoạn chunk">✂️</a> } } @if (Model.CanManageCourse) { <form method="post" asp-page-handler="Delete" onsubmit="return confirm('Xóa hoàn toàn tài liệu và tri thức của file?')"><input type="hidden" name="documentId" value="@d.Id"/><input type="hidden" name="courseId" value="@Model.CourseId"/><button class="icon-btn" title="Xóa">🗑</button></form> }</div></td></tr> }
-@if (!Model.Documents.Any()) { <tr><td colspan="5"><div class="empty-state compact"><span>📭</span><h3>Chưa có tài liệu</h3><p>@(Model.CourseId.HasValue ? "Môn học chưa có tài liệu hoàn thành." : "Bạn chưa được cấp quyền môn học nào.")</p></div></td></tr> }
+
+<div class="document-layout">
+@if (Model.CourseId.HasValue && !Model.UploadCourses.Any()) {
+    <aside class="panel access-panel" style="border-radius: 16px; padding: 24px; background: #fff; box-shadow: var(--shadow); border: 1px solid var(--line); width: 320px; flex-shrink: 0;"><span class="eyebrow" style="font-size: 0.72rem; letter-spacing: 0.1em; color: var(--green); font-weight: 700;">QUYỀN HẠN CỦA BẠN</span><h2 style="font-size: 1.3rem; font-weight: 700; margin: 8px 0; color: var(--ink);">Giảng viên môn học</h2><p style="color: var(--muted); font-size: 0.85rem; line-height: 1.6; margin-bottom: 20px;">Bạn có quyền xem, tải tài liệu đã hoàn thành và tham gia hỏi đáp. Chỉ Trưởng bộ môn mới có quyền upload mới hoặc quản lý cấu trúc dữ liệu.</p><a class="btn btn-primary" asp-page="/Student/Chat" asp-route-courseId="@Model.CourseId" style="width: 100%; border-radius: 10px; padding: 10px; font-size: 0.9rem; font-weight: 600; text-align: center; background: var(--green); border: none; text-decoration: none; color: #fff; display: block;">Mở Chatbox hỏi đáp</a></aside>
+}
+<section class="panel grow" style="border-radius: 16px; padding: 24px; background: #fff; box-shadow: var(--shadow); border: 1px solid var(--line);"><div class="panel-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;"><div><h2 style="font-size: 1.35rem; font-weight: 700; color: var(--ink); margin: 0;">Danh sách tài liệu</h2><p style="margin: 4px 0 0; color: var(--muted); font-size: 0.85rem;">@(Model.CanManageCourse ? "Xem và quản lý tất cả các tài liệu trong môn học này." : "Hiển thị các tài liệu học tập đã được index thành công.")</p></div><form method="get" id="courseFilterForm"><select asp-for="CourseId" class="form-select" onchange="this.form.submit()" style="border-radius: 10px; padding: 8px 12px; font-size: 0.88rem; min-width: 160px;"><option value="">— Chọn môn học —</option>@foreach (var c in Model.Courses) { <option value="@c.Id">@c.Code - @c.Name</option> }</select></form></div>
+<div class="table-wrap">
+<table class="data-table" style="width: 100%; border-collapse: collapse;">
+<thead>
+    <tr style="border-bottom: 2px solid var(--line);">
+        <th style="padding: 12px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700;">Tên tệp tin</th>
+        <th style="padding: 12px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700;">Môn học</th>
+        <th style="padding: 12px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700;">Ngày tải lên</th>
+        <th style="padding: 12px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700;">Cấu hình AI</th>
+        <th style="padding: 12px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700;">Trạng thái</th>
+        <th style="padding: 12px; text-align: right; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700; width: 120px;">Thao tác</th>
+    </tr>
+</thead>
+<tbody>
+@foreach (var d in Model.Documents) { var cls = d.Status.ToString().ToLowerInvariant(); var statusLabel = d.Status switch { DocumentStatus.Completed => "Thành công", DocumentStatus.Failed => "Bị từ chối", _ => "Đang xử lý" }; <tr data-document-id="@d.Id" data-file-name="@d.FileName" style="border-bottom: 1px solid var(--line); transition: background 0.15s;" onmouseover="this.style.background='#fcfdfc'" onmouseout="this.style.background='transparent'">
+    <td style="padding: 14px 12px;"><div class="file-cell" style="display: flex; gap: 10px; align-items: flex-start;">
+        <span style="font-size: 1.5rem; line-height: 1;">📄</span>
+        <div>
+            <strong style="color: var(--ink); font-size: 0.9rem; display: block; word-break: break-all;">@d.FileName</strong>
+            @if (d.FailureReason is not null) { 
+                <small class="rejection-reason" title="@d.FailureReason" style="color: var(--red); display: block; font-size: 0.75rem; margin-top: 4px; line-height: 1.3;">⚠️ <strong>Từ chối:</strong> @d.FailureReason</small> 
+            }
+        </div>
+    </div></td>
+    <td style="padding: 14px 12px; color: var(--muted); font-size: 0.88rem;">@d.CourseName</td>
+    <td style="padding: 14px 12px; color: var(--muted); font-size: 0.88rem;">@d.UploadedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+    <td style="padding: 14px 12px; font-size: 0.78rem; line-height: 1.4; color: var(--muted);">
+        <div>✂️ @d.ChunkingStrategy</div>
+        <div style="margin-top: 2px;">🔢 @d.EmbeddingModel</div>
+    </td>
+    <td style="padding: 14px 12px;"><span class="status @cls" style="padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">@statusLabel</span>@if (d.Status == DocumentStatus.Processing) { <div class="processing-progress" style="margin-top: 8px; width: 140px;"><div class="progress-copy" style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--muted); margin-bottom: 2px;"><small class="processing-message" style="max-width: 100px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">Đang xử lý…</small><b class="processing-percent">0%</b></div><div class="progress-track" style="height: 4px; border-radius: 99px; background: #e0e6e2; overflow: hidden;"><i style="display: block; width: 0%; height: 100%; background: var(--green); transition: width 0.2s;"></i></div></div> }</td>
+    <td style="padding: 14px 12px; text-align: right;"><div class="row-actions" style="display: flex; gap: 8px; justify-content: flex-end;">@if (d.Status == DocumentStatus.Completed) { <a class="icon-btn" asp-page-handler="File" asp-route-documentId="@d.Id" asp-route-courseId="@d.CourseId" title="Tải tài liệu" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: #f0f4f2; color: var(--green); font-size: 1.1rem; transition: background 0.2s;" onmouseover="this.style.background='#dcebe4'" onmouseout="this.style.background='#f0f4f2'">⇩</a> @if (Model.CanManageCourse) { <a class="icon-btn" asp-page="/Lecturer/Chunks" asp-route-documentId="@d.Id" title="Xem các đoạn chunk" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: #f0f4f2; color: var(--green); font-size: 0.95rem; transition: background 0.2s;" onmouseover="this.style.background='#dcebe4'" onmouseout="this.style.background='#f0f4f2'">✂️</a> } } @if (Model.CanManageCourse) { <form method="post" asp-page-handler="Delete" onsubmit="return confirm('Xóa hoàn toàn tài liệu và tri thức của file?')" style="margin: 0; display: inline-block;"><input type="hidden" name="documentId" value="@d.Id"/><input type="hidden" name="courseId" value="@Model.CourseId"/><button class="icon-btn" title="Xóa" style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; border: none; background: #fdf2f2; color: var(--red); font-size: 0.95rem; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#fde2e2'" onmouseout="this.style.background='#fdf2f2'">🗑</button></form> }</div></td>
+</tr> }
+@if (!Model.Documents.Any()) { <tr><td colspan="6"><div class="empty-state compact" style="text-align: center; padding: 40px 10px; color: var(--muted);"><span>📭</span><h3 style="margin: 8px 0; color: var(--ink); font-size: 1.1rem;">Chưa có tài liệu</h3><p style="font-size: 0.85rem; margin: 0;">@(Model.CourseId.HasValue ? "Môn học chưa có tài liệu hoàn thành." : "Bạn chưa được cấp quyền môn học nào.")</p></div></td></tr> }
 </tbody></table></div></section></div>
 @section Scripts { <script>
 const uploadForm = document.getElementById('uploadForm');
+const dragDropArea = document.getElementById('dragDropArea');
+const fileInput = document.getElementById('fileInput');
+const fileSelectedInfo = document.getElementById('fileSelectedInfo');
+const selectedFileName = document.getElementById('selectedFileName');
+const removeFileBtn = document.getElementById('removeFileBtn');
+
+const uploadModal = document.getElementById('uploadModal');
+const openUploadModalBtn = document.getElementById('openUploadModalBtn');
+const closeUploadModalBtn = document.getElementById('closeUploadModalBtn');
+
+if (openUploadModalBtn && uploadModal) {
+    openUploadModalBtn.addEventListener('click', () => {
+        uploadModal.style.display = 'flex';
+    });
+}
+
+if (closeUploadModalBtn && uploadModal) {
+    closeUploadModalBtn.addEventListener('click', () => {
+        uploadModal.style.display = 'none';
+    });
+}
+
+window.addEventListener('click', event => {
+    if (event.target === uploadModal) {
+        uploadModal.style.display = 'none';
+    }
+});
+
+if (dragDropArea && fileInput) {
+    dragDropArea.addEventListener('click', () => fileInput.click());
+    
+    dragDropArea.addEventListener('dragover', e => {
+        e.preventDefault();
+        dragDropArea.style.borderColor = 'var(--green)';
+        dragDropArea.style.background = '#eef7f2';
+        dragDropArea.querySelector('.drop-icon').style.transform = 'translateY(-4px)';
+    });
+
+    ['dragleave', 'dragend'].forEach(type => {
+        dragDropArea.addEventListener(type, () => {
+            dragDropArea.style.borderColor = '#a4bfae';
+            dragDropArea.style.background = '#fbfdfc';
+            dragDropArea.querySelector('.drop-icon').style.transform = 'none';
+        });
+    });
+
+    dragDropArea.addEventListener('drop', e => {
+        e.preventDefault();
+        dragDropArea.style.borderColor = '#a4bfae';
+        dragDropArea.style.background = '#fbfdfc';
+        dragDropArea.querySelector('.drop-icon').style.transform = 'none';
+        
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            updateFileSelectedState();
+        }
+    });
+
+    fileInput.addEventListener('change', updateFileSelectedState);
+
+    removeFileBtn?.addEventListener('click', e => {
+        e.stopPropagation();
+        fileInput.value = '';
+        updateFileSelectedState();
+    });
+}
+
+function updateFileSelectedState() {
+    if (fileInput.files && fileInput.files.length > 0) {
+        selectedFileName.textContent = fileInput.files[0].name;
+        fileSelectedInfo.style.display = 'flex';
+        dragDropArea.style.display = 'none';
+    } else {
+        selectedFileName.textContent = '';
+        fileSelectedInfo.style.display = 'none';
+        dragDropArea.style.display = 'flex';
+    }
+}
+
 uploadForm?.addEventListener('submit', event => {
     event.preventDefault();
     const panel = document.getElementById('uploadProgress');
@@ -47,22 +223,22 @@ uploadForm?.addEventListener('submit', event => {
     const percent = document.getElementById('uploadPercent');
     const text = document.getElementById('uploadProgressText');
     const button = document.getElementById('uploadButton');
-    panel.hidden = false;
-    button.disabled = true;
+    if (panel) panel.hidden = false;
+    if (button) button.disabled = true;
     const request = new XMLHttpRequest();
     request.open('POST', uploadForm.action);
     request.upload.addEventListener('progress', e => {
         if (!e.lengthComputable) return;
         const value = Math.round(e.loaded / e.total * 100);
-        bar.style.width = `${value}%`;
-        percent.textContent = `${value}%`;
-        text.textContent = value === 100 ? 'Upload hoàn tất, đang ghi nhận…' : 'Đang upload…';
+        if (bar) bar.style.width = `${value}%`;
+        if (percent) percent.textContent = `${value}%`;
+        if (text) text.textContent = value === 100 ? 'Upload hoàn tất, đang ghi nhận…' : 'Đang upload…';
     });
     request.addEventListener('load', () => {
         if (request.status >= 200 && request.status < 400) location.assign(request.responseURL || location.href);
-        else { text.textContent = 'Upload không thành công. Vui lòng thử lại.'; button.disabled = false; }
+        else { if (text) text.textContent = 'Upload không thành công. Vui lòng thử lại.'; if (button) button.disabled = false; }
     });
-    request.addEventListener('error', () => { text.textContent = 'Mất kết nối khi upload. Vui lòng thử lại.'; button.disabled = false; });
+    request.addEventListener('error', () => { if (text) text.textContent = 'Mất kết nối khi upload. Vui lòng thử lại.'; if (button) button.disabled = false; });
     request.send(new FormData(uploadForm));
 });
 

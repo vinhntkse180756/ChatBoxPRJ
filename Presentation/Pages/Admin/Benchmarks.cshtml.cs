@@ -20,6 +20,8 @@ public sealed class BenchmarksModel(
     [BindProperty(SupportsGet = true)] public Guid? RunId { get; set; }
     [BindProperty] public List<string> SelectedModels { get; set; } = [];
 
+    [BindProperty] public IFormFile? UploadTestSet { get; set; }
+
     public IReadOnlyList<SelectListItem> CourseOptions { get; private set; } = [];
     public IReadOnlyList<DocumentDto> CompletedDocuments { get; private set; } = [];
     public IReadOnlyList<BenchmarkRunSummaryDto> RecentRuns { get; private set; } = [];
@@ -31,13 +33,9 @@ public sealed class BenchmarksModel(
 
     public static readonly IReadOnlyList<string> AvailableModels = new[]
     {
-        "gemini-2.5-flash",
-        "gemini-2.5-pro",
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
+        "gemini-3.1-flash-lite",
         "gpt-4o (GitHub)",
-        "gpt-4o-mini (GitHub)",
-        "Local Mock"
+        "gpt-4o-mini (GitHub)"
     };
 
     public async Task OnGetAsync()
@@ -61,7 +59,7 @@ public sealed class BenchmarksModel(
             testSetPath,
             CourseId,
             SelectedDocumentIds,
-            SelectedModels.Count > 0 ? SelectedModels : new List<string> { "gemini-2.5-flash" },
+            SelectedModels.Count > 0 ? SelectedModels : new List<string> { "gemini-3.1-flash-lite" },
             HttpContext.RequestAborted);
 
         Flash = result.Message;
@@ -72,6 +70,57 @@ public sealed class BenchmarksModel(
         await LoadAsync();
         ChartJson = BuildChartJson(SelectedRun);
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostUploadTestSetAsync()
+    {
+        if (UploadTestSet is null || UploadTestSet.Length == 0)
+        {
+            Flash = "Vui lòng chọn một tệp JSON câu hỏi hợp lệ.";
+            FlashType = "danger";
+            return RedirectToPage(new { courseId = CourseId });
+        }
+
+        try
+        {
+            // Verify it's a valid JSON
+            using (var checkStream = UploadTestSet.OpenReadStream())
+            {
+                using (var jsonDoc = await JsonDocument.ParseAsync(checkStream))
+                {
+                    // Check if it has the required properties
+                    if (!jsonDoc.RootElement.TryGetProperty("Questions", out var questions) || questions.ValueKind != JsonValueKind.Array)
+                    {
+                        throw new InvalidOperationException("File JSON thiếu thuộc tính 'Questions' hoặc không đúng cấu trúc.");
+                    }
+                }
+            }
+
+            var testSetPath = Path.GetFullPath(
+                BenchmarkScope.TestSetRelativePath,
+                env.ContentRootPath);
+
+            var dir = Path.GetDirectoryName(testSetPath);
+            if (dir is not null && !Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            await using (var fileStream = new FileStream(testSetPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                await UploadTestSet.CopyToAsync(fileStream);
+            }
+
+            Flash = "Tải lên và cập nhật bộ câu hỏi Testset thành công!";
+            FlashType = "success";
+        }
+        catch (Exception ex)
+        {
+            Flash = $"Tải lên thất bại. Lý do: {ex.Message}";
+            FlashType = "danger";
+        }
+
+        return RedirectToPage(new { courseId = CourseId });
     }
 
     private async Task LoadAsync()

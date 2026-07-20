@@ -1,0 +1,41 @@
+{
+  "CourseCode": "PRN222",
+  "Questions": [
+    {
+      "Id": "Q-NET-01",
+      "Question": "Phân biệt giao thức mạng TCP và UDP.",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["TCP", "UDP", "connection-oriented", "connectionless", "reliable"]
+    },
+    {
+      "Id": "Q-NET-02",
+      "Question": "Cấu trúc định dạng URI gồm những phần nào và phân biệt URI, URL, URN.",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["URI", "URL", "URN", "scheme", "authority", "path"]
+    },
+    {
+      "Id": "Q-NET-03",
+      "Question": "HttpClient trong .NET Core có ưu điểm gì so với WebRequest/WebResponse truyền thống?",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["HttpClient", "WebRequest", "WebResponse", "connection pool", "thread-safe"]
+    },
+    {
+      "Id": "Q-NET-04",
+      "Question": "TcpListener và TcpClient trong C# socket programming thực hiện vai trò gì?",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["TcpListener", "TcpClient", "Sockets", "AcceptTcpClient", "GetStream"]
+    },
+    {
+      "Id": "Q-NET-05",
+      "Question": "Socket là gì và có các thuộc tính quan trọng nào trong lớp Socket của .NET?",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["Socket", "IP stack", "Available", "Connected", "Blocking"]
+    },
+    {
+      "Id": "Q-NET-06",
+      "Question": "Viết lệnh SQL Server để SELECT dữ liệu từ bảng Student.",
+      "ExpectReject": true,
+      "ExpectedKeywords": ["SQL Server", "SELECT"]
+    }
+  ]
+}

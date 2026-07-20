@@ -1,0 +1,41 @@
+{
+  "CourseCode": "SWD392",
+  "Questions": [
+    {
+      "Id": "Q3-01",
+      "Question": "Waterfall Model là gì và có hạn chế nào?",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["Waterfall", "Idealized", "phase", "limitations", "iteration"]
+    },
+    {
+      "Id": "Q3-02",
+      "Question": "Sự khác biệt giữa validation và verification trong V&V là gì?",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["validation", "verification", "right system", "system right"]
+    },
+    {
+      "Id": "Q3-03",
+      "Question": "4 hoạt động chính trong mỗi chu kỳ của Spiral Process Model là gì?",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["Spiral", "objectives", "risks", "product", "next cycle"]
+    },
+    {
+      "Id": "Q3-04",
+      "Question": "Hãy phân biệt Throwaway Prototyping và Evolutionary Prototyping.",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["Throwaway", "feedback", "Evolutionary", "incremental", "operational"]
+    },
+    {
+      "Id": "Q3-05",
+      "Question": "Các giai đoạn (phases) lặp của RUP bao gồm những gì?",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["RUP", "Inception", "Elaboration", "Construction", "Transition"]
+    },
+    {
+      "Id": "Q3-06",
+      "Question": "Cách thiết kế database với mô hình quan hệ 1-nhiều trong SQL Server?",
+      "ExpectReject": true,
+      "ExpectedKeywords": ["SQL Server", "foreign key"]
+    }
+  ]
+}

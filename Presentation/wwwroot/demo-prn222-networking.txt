@@ -1,0 +1,54 @@
+# Networking Programming in .NET
+
+## 1. Networking Basics
+- **Platform**: Hardware + Operating system.
+- **Client**: An application running on a computer (e.g., browser) that receives data from a server.
+- **Server**: An application running on a computer (e.g., Kestrel, IIS, Nginx) that supplies data to clients.
+- **IP Address**: Unsigned integer identifying a network element (computer, router). 
+  - *IPv4*: 4-byte address (e.g., 192.143.5.1).
+  - *IPv6*: 16-byte address.
+- **Port**: Unsigned 2-byte integer (0 to 65535) helping the OS differentiate network communicating processes. Ports 0 to 1023 are reserved.
+- **Protocols**: Rules for packaging data across network communication.
+  - **TCP (Transmission Control Protocol)**: Connection-oriented protocol providing a reliable, acknowledged flow of data over a single connecting line.
+  - **UDP (User Datagram Protocol)**: Connectionless protocol sending independent packets (datagrams) with no arrival or ordering guarantees. Bypasses acknowledgement.
+
+## 2. Client-Server Model & Addressing
+- **Internet Communication**: Computers communicate across network environments by attaching headers (H-identifiable data) at each network layer.
+- **Identification**: Computers are identified via IP Address (e.g., `127.0.0.1` for local loopback) or Hostname. IP address architecture is defined by **RFC 790**.
+- **URI, URL, and URN**:
+  - **URI (Uniform Resource Identifier)**: Specially formatted string describing a resource (web page, file, email). Built of *scheme*, *authority* (host, port), and *path* (query, fragment). Exposed in .NET via the `Uri` class.
+  - **URL (Uniform Resource Locator)**: A subset of URI describing the network address where a resource is available. Begins with the protocol (e.g., `http://`, `tcp://`).
+  - **URN (Uniform Resource Name)**: A URI using the `urn` scheme representing location-independent identifiers (e.g., `urn:isbn:0451450523`). It does not guarantee resource availability.
+
+## 3. System.Net.* Namespaces in .NET
+.NET classes for communicating over standard network protocols:
+- `WebClient`: Facade class for simple upload/download (obsolete, replaced by HttpClient).
+- `WebRequest` / `WebResponse`: Abstract base classes providing low-level request/response models.
+  - *Key WebRequest properties*: `ContentLength`, `ContentType`, `Credentials`, `Headers`, `Method`, `RequestUri`, `Timeout`.
+  - *Key WebRequest methods*: `Create()`, `GetRequestStream()`, `GetResponse()`, `BeginGetResponse()`.
+  - *Key WebResponse properties*: `ContentLength`, `ContentType`, `Headers`, `IsFromCache`.
+  - *Key WebResponse methods*: `Close()`, `GetResponseStream()`.
+- `HttpClient`: Newer, thread-safe API written for modern HTTP web APIs and RESTful services. Relies on connection pooling and supports custom message handlers (for logging, compression, encryption).
+  - *Key properties*: `BaseAddress`, `Timeout`, `MaxResponseContentBufferSize`.
+  - *Key methods*: `GetAsync()`, `GetStringAsync()`, `PostAsync()`, `PutAsync()`, `DeleteAsync()`.
+- `Dns`: Translates between hostnames and IP addresses (`Dns.GetHostEntry()`).
+- `HttpListener`: For writing custom HTTP servers.
+- `SmtpClient`: For constructing and sending emails via SMTP.
+
+## 4. TCP Services in .NET
+Implemented in `System.Net.Sockets` for connection-based communication (IP + Port):
+- **Socket**: Represents a low-level access point to the IP stack. Supports synchronous and asynchronous data transfer via `ProtocolType` protocols.
+  - *Properties*: `Available`, `Connected`, `Blocking`, `ReceiveBufferSize`, `SendTimeout`, `ReceiveTimeout`, `SendBufferSize`.
+  - *Methods*: `Accept()`, `Connect()`, `Listen()`, `Send()`, `Receive()`, `SendFile()`, `Close()`.
+- **TcpListener**: Listens for and accepts incoming connection requests in blocking synchronous mode (using a `TcpClient` or `Socket`).
+  - *Methods*: `Start()`, `Stop()`, `AcceptSocket()` / `AcceptSocketAsync()`, `AcceptTcpClient()` / `AcceptTcpClientAsync()`, `Pending()`.
+- **TcpClient**: Provides client connections for TCP network services in synchronous blocking mode. Can connect via `Connect()` method or by passing hostname and port to the constructor.
+  - *Properties*: `Active`, `Available`, `Client` (underlying Socket), `Connected`, `ReceiveBufferSize`, `ReceiveTimeout`, `SendBufferSize`, `SendTimeout`.
+  - *Methods*: `Connect()` / `ConnectAsync()`, `BeginConnect()`, `GetStream()` (returns `NetworkStream` for I/O operations), `Close()`, `Dispose()`.
+
+## 5. UDP Services in .NET
+Connectionless communication via `UdpClient`:
+- **UDP Protocol**: Best-effort delivery. Packets can be lost, duplicated, or arrive out of sequence.
+- **UdpClient**: Abstract class communicating via UDP, wrapping the lower-level Socket.
+  - *Properties*: `Active`, `Available`, `Client`.
+  - *Methods*: `Connect()`, `Close()`, `Send()`, `Receive()` (returns datagram + remote endpoint), `JoinMulticastGroup()`, `Dispose()`.

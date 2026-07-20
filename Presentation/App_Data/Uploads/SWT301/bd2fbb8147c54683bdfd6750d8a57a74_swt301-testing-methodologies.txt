@@ -1,0 +1,9 @@
+﻿Software Testing Methodologies ensure software quality and reliability.
+Manual testing involves human testers executing test cases without tools.
+Automated testing uses test scripts and frameworks to execute test cases automatically.
+Testing levels:
+1. Unit Testing: Verifies the smallest testable parts of an application (methods, classes).
+2. Integration Testing: Verifies that different components or modules work together correctly.
+3. System Testing: Verifies the complete, integrated system against specified requirements.
+4. Acceptance Testing: Verifies if the system meets user needs and is ready for deployment.
+Black-box testing focuses on inputs/outputs, while White-box testing inspects internal code structure.

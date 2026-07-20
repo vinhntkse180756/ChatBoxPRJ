@@ -1,0 +1,50 @@
+# CH02 – OVERVIEW OF THE UML NOTATION
+
+## 1. Introduction to UML Diagrams
+UML (Unified Modeling Language) provides various diagrams to model system designs:
+- **Use case diagram**: Defines user interactions with the system.
+- **Class diagram**: Depicts classes, attributes, operations, and relationships.
+- **Object diagram**: An instance version of the class diagram (not used by COMET).
+- **Communication diagram**: Depicts how objects interact (called collaboration diagram in UML 1.x).
+- **Sequence diagram**: Interaction diagram showing object interactions over time.
+- **State Machine diagram**: Models the lifecycle and states of a component/system.
+- **Activity diagram**: Models procedural flow (not extensively used by COMET).
+- **Composite structure diagram**: Introduced in UML 2, suited for modeling distributed components in a platform-independent model.
+- **Deployment diagram**: Maps software components to physical hardware nodes.
+
+## 2. Use Case Diagrams
+- **Actor**: Initiates a use case.
+- **Use Case**: Defines a sequence of interactions between the actor and the system.
+- **Relationships**:
+  - `<<extend>>`: Specifies optional behavior extension.
+  - `<<include>>`: Specifies mandatory inclusion of another use case.
+
+## 3. Classes and Objects
+- **Class**: Defines a type, including its:
+  - *Attributes* (data fields)
+  - *Operations* (methods/functions)
+- **Object**: An instance of a class. Under UML notation, an object name is shown **underlined** (e.g., `anObject` or `anotherObject : Class` or `: Class` for anonymous objects).
+
+## 4. Class Diagrams: Hierarchies and Relationships
+- **Association**: A static, structural relationship between two or more classes.
+  - *Multiplicity*: Specifies how many instances of one class relate to a single instance of another (e.g., `1` exactly one, `0..1` optional, `*` many, `1..*` one or more, `m..n` numerically specified).
+- **Generalization/Specialization Hierarchy**: Represents an **inheritance** (is-a) relationship (e.g., Subclass inherits from Superclass).
+- **Aggregation and Composition Hierarchies**: Represent **whole/part** relationships.
+  - Aggregation (hollow diamond): Weak relationship where parts can exist independently of the whole.
+  - Composition (filled black diamond): Strong relationship where parts' lifetimes are managed by the whole.
+
+## 5. Visibility Modifiers in Classes
+- **Public (`+`)**: Element is visible from outside the class.
+- **Private (`-`)**: Element is visible only from within the class defining it (hidden from other classes).
+- **Protected (`#`)**: Element is visible from within the class defining it and all of its subclasses.
+
+## 6. Interaction Diagrams
+Used to show how objects interact. There are two main types:
+- **Communication Diagram**: Emphasizes the structural organization of objects that send and receive messages.
+- **Sequence Diagram**: Emphasizes the time-ordering of messages.
+
+## 7. UML Extension Mechanisms
+Allows customizing and extending UML notation:
+- **Tagged Value**: Extends the properties of a UML building block to add new metadata. Enclosed in braces (e.g., `{version = 1.0, author = Gill}`).
+- **Constraint**: Specifies a condition or rule that must be true (e.g., `{balance >= 0}`).
+- **Stereotype**: Defines a new building block derived from existing elements but tailored to a specific problem. Indicated by guillemets (e.g., `<<entity>>`, `<<active object>>`, `<<passive object>>`).

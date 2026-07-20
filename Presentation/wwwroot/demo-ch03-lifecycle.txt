@@ -1,0 +1,54 @@
+# CH03 – SOFTWARE LIFE CYCLE MODELS AND PROCESSES
+
+## 1. Waterfall Model
+- **Definition**: Idealized process model in which each phase is completed before the next phase is started, and a project moves from one phase to the next without iteration or overlap.
+- **Limitations**:
+  - Does not show iteration in the life cycle.
+  - Does not show overlap between phases.
+  - Software requirements are tested late in life cycle.
+  - Operational system available late in life cycle.
+- **Waterfall with Iteration**: A major improvement over the undisciplined approach. In practice, some overlap and iteration between phases is necessary when errors are detected.
+
+## 2. Prototyping Models
+- **Throwaway Prototyping**:
+  - Particularly useful for getting feedback on the User Interface.
+  - Developed after a preliminary requirements specification.
+  - Helps overcome the communication barrier between users and developers.
+  - Used for validating requirements or architectural design.
+- **Evolutionary Prototyping**:
+  - A form of incremental development in which the prototype evolves through several intermediate operational systems into the delivered system.
+  - Focuses on having a working subset of the system early and gradually building on it.
+
+## 3. Spiral Process Model (SPM)
+Organized into 4 quadrants per cycle:
+1. **Define objectives, alternatives, and constraints**: Detailed planning, identifying goals and approaches.
+2. **Analyze risks**: Detailed assessment of current project risks and planning activities to alleviate them.
+3. **Develop product**: Development work like requirements analysis, design, or coding.
+4. **Plan next cycle**: Assess progress and plan for the next iteration.
+
+## 4. Rational Unified Process (RUP)
+- Also known as **Unified Software Development Process (USDP)**.
+- Consists of **five core workflows** (Business modeling, Requirements, Analysis & design, Implementation, Test, Deployment) and **four iterative phases**:
+  - **Inception**: Focuses on ideas, concepts, and scope.
+  - **Elaboration**: Focuses on software architecture and design structure.
+  - **Construction**: Ready for release to the user community.
+  - **Transition**: Software is turned over to the user community.
+
+## 5. Design Verification & Validation
+- **Validation**: Ensure the team "builds the right system" (conforms to the user's needs).
+- **Verification**: Ensure the team "builds the system right" (conforms to the specification defined in the previous phase).
+- **V&V Activities**:
+  - Throwaway prototyping for validating against user requirements.
+  - Software technical reviews for checking design conformance.
+  - Performance Analysis: Analyze the performance of a software design before implementation to estimate if it will meet performance goals and detect issues early.
+
+## 6. Software Lifecycle Activities
+- **Requirements Analysis & Specification**: BRD/URD => SRS.
+- **Architectural Design**: Define overall system structures.
+- **Detailed Design**: Define algorithms, internal structures, etc.
+- **Coding**: Each component is coded in the selected programming language.
+- **Software Testing**:
+  - *Unit Test*: Tests on individual components using test coverage criteria.
+  - *Integration*: Combining tested components into progressively complex groupings.
+  - *System Test*: Functional testing, Load testing, Stress testing, and Volume testing.
+  - *Acceptance Test (AT)*: Carried out by the end users.

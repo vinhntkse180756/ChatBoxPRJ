@@ -18,7 +18,7 @@ public sealed class AiOptions
     public string Provider { get; set; } = "Local";
     public string? GeminiApiKey { get; set; }
     public string EmbeddingModel { get; set; } = "gemini-embedding-001";
-    public string ChatModel { get; set; } = "gemini-2.5-flash";
+    public string ChatModel { get; set; } = "gemini-3.1-flash-lite";
 }
 
 public sealed class VectorStoreOptions

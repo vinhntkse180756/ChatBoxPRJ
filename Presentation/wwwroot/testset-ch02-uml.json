@@ -1,0 +1,41 @@
+{
+  "CourseCode": "SWD392",
+  "Questions": [
+    {
+      "Id": "Q2-01",
+      "Question": "Các loại biểu đồ UML được giới thiệu trong tài liệu bao gồm những gì?",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["UML", "diagram", "Use case", "Class", "Sequence", "Deployment"]
+    },
+    {
+      "Id": "Q2-02",
+      "Question": "Thế nào là Association, Multiplicity và Generalization trong Class Diagram?",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["Association", "Multiplicity", "Generalization", "inheritance"]
+    },
+    {
+      "Id": "Q2-03",
+      "Question": "Mô tả 3 bộ điều chỉnh truy cập (visibility modifiers) được biểu diễn bằng ký hiệu trong UML.",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["Public", "+", "Private", "-", "Protected", "#"]
+    },
+    {
+      "Id": "Q2-04",
+      "Question": "Phân biệt sự khác nhau giữa Sequence Diagram và Communication Diagram.",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["Sequence", "Communication", "time-ordering", "structural"]
+    },
+    {
+      "Id": "Q2-05",
+      "Question": "Ba cơ chế mở rộng UML bao gồm những gì?",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["UML Extension", "Tagged Value", "Constraint", "Stereotype"]
+    },
+    {
+      "Id": "Q2-06",
+      "Question": "Viết chương trình ASP.NET Core để cấu hình Entity Framework Core.",
+      "ExpectReject": true,
+      "ExpectedKeywords": ["EF Core", "C#", "ASP.NET"]
+    }
+  ]
+}

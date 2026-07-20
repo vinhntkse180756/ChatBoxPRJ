@@ -1,11 +1,20 @@
 @page
 @model Presentation.Pages.Admin.BenchmarksModel
 @{ ViewData["Title"] = "Benchmarks & Metrics"; }
-<div class="page-heading">
+<div class="page-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
     <div>
         <span class="eyebrow">EVALUATION</span>
         <h1>Benchmarks &amp; Metrics</h1>
         <p>Chạy test set RAG và đo Latency, TopScore, Hit, Reject (Admin only).</p>
+    </div>
+    <div style="background: #fff; padding: 12px 18px; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+        <form method="post" enctype="multipart/form-data" asp-page-handler="UploadTestSet" style="display: flex; align-items: center; gap: 10px; margin: 0;">
+            <div style="display: flex; flex-direction: column;">
+                <label style="font-size: 0.72rem; font-weight: 700; color: var(--muted); margin-bottom: 3px;">Tải lên Testset JSON</label>
+                <input type="file" name="UploadTestSet" accept=".json" required style="font-size: 0.8rem; max-width: 180px;" />
+            </div>
+            <button class="btn btn-sm btn-outline-primary" type="submit" style="border-radius: 6px; padding: 6px 12px; font-size: 0.82rem; font-weight: 600; margin-top: 15px; cursor: pointer;">Cập nhật</button>
+        </form>
     </div>
 </div>
 
@@ -23,7 +32,7 @@
             </select>
         </div>
     </form>
-    <form method="post" asp-page-handler="Run" class="benchmark-filter-row" style="flex-wrap: wrap; gap: 15px; width: 100%;">
+    <form id="benchmarkRunForm" method="post" asp-page-handler="Run" class="benchmark-filter-row" style="flex-wrap: wrap; gap: 15px; width: 100%;">
         <input type="hidden" asp-for="CourseId" />
         <div class="benchmark-field" style="flex: 1 1 100%; margin-top: 10px;">
             <label style="font-weight: 600; display: block; margin-bottom: 8px;">Chọn tài liệu (Cấu hình RAG) muốn so sánh:</label>
@@ -57,14 +66,14 @@
                 {
                     <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
                         <input type="checkbox" name="SelectedModels" value="@modelName" 
-                               @(modelName == "gemini-2.5-flash" ? "checked" : "") />
+                               @(modelName == "gemini-3.1-flash-lite" ? "checked" : "") />
                         <span>@modelName</span>
                     </label>
                 }
             </div>
         </div>
         <div class="benchmark-actions" style="margin-top: 15px; width: 100%; display: flex; justify-content: flex-end;">
-            <button class="btn btn-primary" type="submit">Chạy benchmark</button>
+            <button class="btn btn-primary" type="submit" id="btnSubmitBenchmark">Chạy benchmark</button>
         </div>
     </form>
     <p class="benchmark-hint">Test set: <code>Data/benchmark-questions.json</code> · Cần ≥ 1 tài liệu Completed trên môn đã chọn.</p>
@@ -252,4 +261,33 @@ else
 })();
 </script>
 }
+
+<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); z-index: 9999; justify-content: center; align-items: center; flex-direction: column;">
+    <div style="border: 6px solid #f3f3f3; border-top: 6px solid var(--green, #176b52); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 15px;"></div>
+    <h3 style="margin: 0; color: var(--ink, #18201d); font-family: inherit; font-weight: 700;">Đang chạy benchmark...</h3>
+    <p style="color: var(--muted, #66716c); margin-top: 8px; font-size: 0.95rem;">Quá trình kiểm thử RAG có thể mất vài phút. Vui lòng giữ tab này mở.</p>
+</div>
+
+<style>
+@@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("benchmarkRunForm");
+    const btn = document.getElementById("btnSubmitBenchmark");
+    const overlay = document.getElementById("loadingOverlay");
+
+    if (form && btn && overlay) {
+        form.addEventListener("submit", (e) => {
+            btn.disabled = true;
+            btn.innerHTML = '<span style="display: inline-block; width: 12px; height: 12px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 6px;"></span> Đang chạy...';
+            overlay.style.display = "flex";
+        });
+    }
+});
+</script>
 }

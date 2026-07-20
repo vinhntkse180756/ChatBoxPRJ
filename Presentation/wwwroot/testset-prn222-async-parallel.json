@@ -1,0 +1,41 @@
+{
+  "CourseCode": "PRN222",
+  "Questions": [
+    {
+      "Id": "Q-AP-01",
+      "Question": "von Neumann bottleneck là gì và giải pháp khắc phục trong kiến trúc máy tính?",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["von Neumann", "bottleneck", "delay", "multiprocessor", "multiple processors"]
+    },
+    {
+      "Id": "Q-AP-02",
+      "Question": "Phân biệt 4 kiến trúc máy tính theo phân loại Flynn's Taxonomy.",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["SISD", "SIMD", "MISD", "MIMD", "parallelism"]
+    },
+    {
+      "Id": "Q-AP-03",
+      "Question": "Task Parallel Library (TPL) hỗ trợ lập trình song song trong .NET như thế nào?",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["TPL", "System.Threading", "Parallel", "Task", "ThreadPool"]
+    },
+    {
+      "Id": "Q-AP-04",
+      "Question": "AsParallel(), AsSequential(), ForAll() trong PLINQ có ý nghĩa và tác dụng gì?",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["PLINQ", "AsParallel", "AsSequential", "ForAll", "ParallelEnumerable"]
+    },
+    {
+      "Id": "Q-AP-05",
+      "Question": "Phân biệt 3 mô hình lập trình bất đồng bộ APM, EAP và TAP trong lịch sử .NET.",
+      "ExpectReject": false,
+      "ExpectedKeywords": ["APM", "EAP", "TAP", "async", "await", "Task"]
+    },
+    {
+      "Id": "Q-AP-06",
+      "Question": "Làm thế nào để tạo một API Endpoint bằng Node.js Express?",
+      "ExpectReject": true,
+      "ExpectedKeywords": ["Node.js", "Express"]
+    }
+  ]
+}

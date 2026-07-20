@@ -25,6 +25,6 @@ public sealed class LecturersModel(IAccountService accounts) : PageModel
         if (!result.Success) { await OnGetAsync(); return Page(); }
         return RedirectToPage();
     }
-    public async Task<IActionResult> OnPostUpdateAsync() { ModelState.Remove(nameof(Password)); var r = await accounts.UpdateLecturerAsync(EditId, Code, FullName, Email, Password, HttpContext.RequestAborted); Flash = r.Message; FlashType = r.Success ? "success" : "danger"; return RedirectToPage(); }
+    public async Task<IActionResult> OnPostUpdateAsync() { ModelState.Remove(nameof(Password)); var r = await accounts.UpdateLecturerAsync(EditId, Code, FullName, Email, null, HttpContext.RequestAborted); Flash = r.Message; FlashType = r.Success ? "success" : "danger"; return RedirectToPage(); }
     public async Task<IActionResult> OnPostDeleteAsync(Guid id) { var r = await accounts.DeleteLecturerAsync(id, HttpContext.RequestAborted); Flash = r.Message; FlashType = r.Success ? "success" : "danger"; return RedirectToPage(); }
 }
